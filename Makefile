@@ -1,4 +1,4 @@
-export ROOT			?= $(CURDIR)/../../../
+export ROOT			?= $(CURDIR)/../../..
 export V 			?= 0
 export TA_CPU 			?= cortex-a53
 #export TA_CROSS_COMPILE 	?= $(ROOT)/toolchains/aarch32/bin/arm-linux-gnueabihf-
