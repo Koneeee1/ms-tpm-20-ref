@@ -13,7 +13,7 @@ cflags-y += -D_ARM_ \
 		-Wstack-protector
 
 ifeq ($(CFG_ARM64_ta_arm64),y)
-cflags-y += -mstrict-align
+#cflags-y += -mstrict-align
 else
 cflags-y += -mno-unaligned-access
 endif
