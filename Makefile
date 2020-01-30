@@ -2,7 +2,7 @@ export ROOT			?= $(CURDIR)/../../..
 export V 			?= 0
 export TA_CPU 			?= cortex-a53
 #export TA_CROSS_COMPILE 	?= $(ROOT)/toolchains/aarch32/bin/arm-linux-gnueabihf-
-export TA_DEV_KIT_DIR 		?= /storage/ge34yuf/OPTEE/zcu102-2018.3/build/tmp/deploy/images/zcu102-zynqmp/optee/export-ta_arm64
+#export TA_DEV_KIT_DIR 		?= /storage/ge34yuf/OPTEE/zcu102-2018.3/build/tmp/deploy/images/zcu102-zynqmp/optee/export-ta_arm64
 export CFG_TEE_TA_LOG_LEVEL 	?= 3
 
 #CROSS_COMPILE			?= /usr/bin/ccache $(TA_CROSS_COMPILE)
