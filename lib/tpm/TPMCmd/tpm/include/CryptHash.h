@@ -117,6 +117,9 @@ typedef union
 #if     ALG_SHA512
     tpmHashStateSHA512_t       Sha512;
 #endif
+#if     ALG_SHA3_384
+    tpmHashStateSHA3_384_t     Sha3_384;
+#endif
 
 // Additions for symmetric block cipher MAC
 #if SMAC_IMPLEMENTED
@@ -199,6 +202,9 @@ typedef struct _HASH_METHODS
 #endif
 #if ALG_SHA384
     TPM2B_TYPE(SHA384_DIGEST, SHA384_DIGEST_SIZE);
+#endif
+#if ALG_SHA3_384
+    TPM2B_TYPE(SHA3_384_DIGEST, SHA3_384_DIGEST_SIZE);
 #endif
 #if ALG_SHA512
     TPM2B_TYPE(SHA512_DIGEST, SHA512_DIGEST_SIZE);

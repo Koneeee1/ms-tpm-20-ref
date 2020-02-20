@@ -47,6 +47,7 @@
 #endif
 
 #include <wolfssl/wolfcrypt/sha.h>
+#include <wolfssl/wolfcrypt/sha3.h>
 #include <wolfssl/wolfcrypt/sha256.h>
 #include <wolfssl/wolfcrypt/sha512.h>
 
@@ -64,6 +65,7 @@
 #define tpmHashStateSHA256_t      wc_Sha256
 #define tpmHashStateSHA384_t      wc_Sha512
 #define tpmHashStateSHA512_t      wc_Sha512
+#define tpmHashStateSHA3_384_t    wc_Sha3
 
 #ifdef TPM_ALG_SM3
 #   error "The version of WolfCrypt used by this code does not support SM3"
@@ -176,7 +178,13 @@ typedef const BYTE    *PCBYTE;
 #define tpmHashEnd_SHA512           wc_Sha512Final
 #define tpmHashStateCopy_SHA512     memcpy 
 #define tpmHashStateExport_SHA512   memcpy 
-#define tpmHashStateImport_SHA512   memcpy 
+#define tpmHashStateImport_SHA512   memcpy  
+#define tpmHashStart_SHA3_384         wc_InitSha3_384
+#define tpmHashData_SHA3_384          wc_Sha3_384_Update
+#define tpmHashEnd_SHA3_384           wc_Sha3_384_Final
+#define tpmHashStateCopy_SHA3_384     memcpy 
+#define tpmHashStateExport_SHA3_384   memcpy 
+#define tpmHashStateImport_SHA3_384   memcpy 
 
 #endif // _CRYPT_HASH_C_
 

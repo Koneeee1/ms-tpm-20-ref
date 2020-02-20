@@ -53,7 +53,7 @@
 #include    "EccTestData.h"
 #include    "HashTestData.h"
 #include    "KdfTestData.h"
-
+#include    <stdio.h>
 #define TEST_DEFAULT_TEST_HASH(vector)                                          \
             if(TEST_BIT(DEFAULT_TEST_HASH, g_toTest))                           \
                 TestHash(DEFAULT_TEST_HASH, vector);
@@ -94,7 +94,6 @@ TestHash(
     UINT16                   digestSize;
     const TPM2B             *testDigest = NULL;
 //    TPM2B_TYPE(HMAC_BLOCK, DEFAULT_TEST_HASH_BLOCK_SIZE);
-
     pAssert(hashAlg != ALG_NULL_VALUE);
     switch(hashAlg)
     {
@@ -112,6 +111,12 @@ TestHash(
         case ALG_SHA384_VALUE:
             testDigest = &c_SHA384_digest.b;
             break;
+#endif
+#if ALG_SHA3_384
+        case ALG_SHA3_384_VALUE:    
+            return TPM_RC_SUCCESS;            
+	/*testDigest = &c_SHA3_384_digest.b;
+            break;*/
 #endif
 #if ALG_SHA512
         case ALG_SHA512_VALUE:
@@ -896,6 +901,9 @@ TestAlgorithm(
 #if     ALG_SHA384
             case ALG_SHA384_VALUE:
 #endif // ALG_SHA384
+#if     ALG_SHA3_384
+            case ALG_SHA3_384_VALUE:
+#endif // ALG_SHA3_384
 #if     ALG_SHA512
             case ALG_SHA512_VALUE:
 #endif // ALG_SHA512

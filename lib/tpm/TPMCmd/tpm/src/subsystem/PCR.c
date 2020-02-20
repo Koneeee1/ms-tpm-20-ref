@@ -294,6 +294,11 @@ GetSavedPcrPointer(
             return gc.pcrSave.sha384[pcrIndex];
             break;
 #endif
+#if     ALG_SHA3_384
+        case ALG_SHA3_384_VALUE:
+            return gc.pcrSave.sha3_384[pcrIndex];
+            break;
+#endif
 
 #if     ALG_SHA512
         case ALG_SHA512_VALUE:
@@ -376,6 +381,11 @@ GetPcrPointer(
 #if     ALG_SHA384
         case ALG_SHA384_VALUE:
             pcr = s_pcrs[pcrNumber].sha384Pcr;
+            break;
+#endif
+#if     ALG_SHA3_384
+        case ALG_SHA3_384_VALUE:
+            pcr = s_pcrs[pcrNumber].sha3_384Pcr;
             break;
 #endif
 #if     ALG_SHA512

@@ -1290,6 +1290,9 @@ TPMI_ALG_HASH_Unmarshal(TPMI_ALG_HASH *target, BYTE **buffer, INT32 *size, BOOL 
 #if       ALG_SHA384
         case ALG_SHA384_VALUE:
 #endif // ALG_SHA384
+#if       ALG_SHA3_384
+        case ALG_SHA3_384_VALUE:
+#endif // ALG_SHA3_384
 #if       ALG_SHA512
         case ALG_SHA512_VALUE:
 #endif // ALG_SHA512
@@ -1644,6 +1647,9 @@ TPMI_ALG_MAC_SCHEME_Unmarshal(TPMI_ALG_MAC_SCHEME *target, BYTE **buffer, INT32 
 #if       ALG_SHA384
         case ALG_SHA384_VALUE:
 #endif // ALG_SHA384
+#if       ALG_SHA3_384
+        case ALG_SHA3_384_VALUE:
+#endif // ALG_SHA3_384
 #if       ALG_SHA512
         case ALG_SHA512_VALUE:
 #endif // ALG_SHA512
@@ -1757,6 +1763,10 @@ TPMU_HA_Unmarshal(TPMU_HA *target, BYTE **buffer, INT32 *size, UINT32 selector)
         case ALG_SHA384_VALUE:
             return BYTE_Array_Unmarshal((BYTE *)(target->sha384), buffer, size, (INT32)SHA384_DIGEST_SIZE);
 #endif // ALG_SHA384
+#if       ALG_SHA3_384
+        case ALG_SHA3_384_VALUE:
+            return BYTE_Array_Unmarshal((BYTE *)(target->sha3_384), buffer, size, (INT32)SHA3_384_DIGEST_SIZE);
+#endif // ALG_SHA3_384
 #if       ALG_SHA512
         case ALG_SHA512_VALUE:
             return BYTE_Array_Unmarshal((BYTE *)(target->sha512), buffer, size, (INT32)SHA512_DIGEST_SIZE);
@@ -1786,6 +1796,10 @@ TPMU_HA_Marshal(TPMU_HA *source, BYTE **buffer, INT32 *size, UINT32 selector)
         case ALG_SHA384_VALUE:
             return BYTE_Array_Marshal((BYTE *)(source->sha384), buffer, size, (INT32)SHA384_DIGEST_SIZE);
 #endif // ALG_SHA384
+#if       ALG_SHA3_384
+        case ALG_SHA3_384_VALUE:
+            return BYTE_Array_Marshal((BYTE *)(source->sha3_384), buffer, size, (INT32)SHA3_384_DIGEST_SIZE);
+#endif // ALG_SHA3_384
 #if       ALG_SHA512
         case ALG_SHA512_VALUE:
             return BYTE_Array_Marshal((BYTE *)(source->sha512), buffer, size, (INT32)SHA512_DIGEST_SIZE);

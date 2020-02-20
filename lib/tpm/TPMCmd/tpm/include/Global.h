@@ -394,6 +394,9 @@ typedef struct PCR_SAVE
 #if     ALG_SHA384
     BYTE                sha384[NUM_STATIC_PCR][SHA384_DIGEST_SIZE];
 #endif
+#if     ALG_SHA3_384
+    BYTE                sha3_384[NUM_STATIC_PCR][SHA3_384_DIGEST_SIZE];
+#endif
 #if     ALG_SHA512
     BYTE                sha512[NUM_STATIC_PCR][SHA512_DIGEST_SIZE];
 #endif
@@ -1127,6 +1130,10 @@ typedef struct _COMMAND_
     TPM2B_SHA384_DIGEST sha384CpHash;
     TPM2B_SHA384_DIGEST sha384RpHash;
 #endif
+#if ALG_SHA3_384
+    TPM2B_SHA3_384_DIGEST sha3_384CpHash;
+    TPM2B_SHA3_384_DIGEST sha3_384RpHash;
+#endif
 #if ALG_SHA512
     TPM2B_SHA512_DIGEST sha512CpHash;
     TPM2B_SHA512_DIGEST sha512RpHash;
@@ -1301,6 +1308,10 @@ typedef struct
 #if     ALG_SHA384
     // SHA384 PCR
     BYTE    sha384Pcr[SHA384_DIGEST_SIZE];
+#endif
+#if     ALG_SHA3_384
+    // SHA3_384 PCR
+    BYTE    sha3_384Pcr[SHA3_384_DIGEST_SIZE];
 #endif
 #if     ALG_SHA512
     // SHA512 PCR

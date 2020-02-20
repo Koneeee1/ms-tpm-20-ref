@@ -47,6 +47,8 @@
 // For more information, see TpmSelfTests.txt
 
 #include "Tpm.h"
+#include <tee_internal_api.h>
+#include <tee_internal_api_extensions.h>
 
 //** Functions
 
@@ -92,6 +94,7 @@ CryptSelfTest(
     TPMI_YES_NO      fullTest       // IN: if full test is required
     )
 {
+	DMSG("Hallo Kone");
 #if SIMULATION
     if(g_forceFailureMode)
         FAIL(FATAL_ERROR_FORCED);

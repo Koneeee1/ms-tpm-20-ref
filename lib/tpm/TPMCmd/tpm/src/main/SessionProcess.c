@@ -520,6 +520,10 @@ ClearCpRpHashes(
     command->sha384CpHash.t.size = 0;
     command->sha384RpHash.t.size = 0;
 #endif
+#if ALG_SHA3_384
+    command->sha3_384CpHash.t.size = 0;
+    command->sha3_384RpHash.t.size = 0;
+#endif
 #if ALG_SHA512
     command->sha512CpHash.t.size = 0;
     command->sha512RpHash.t.size = 0;
@@ -552,6 +556,10 @@ GetCpHashPointer(
 #if ALG_SHA384
         case ALG_SHA384_VALUE:
             return (TPM2B_DIGEST *)&command->sha384CpHash;
+#endif
+#if ALG_SHA3_384
+        case ALG_SHA3_384_VALUE:
+            return (TPM2B_DIGEST *)&command->sha3_384CpHash;
 #endif
 #if ALG_SHA512
         case ALG_SHA512_VALUE:
@@ -588,6 +596,10 @@ GetRpHashPointer(
 #if ALG_SHA384
         case ALG_SHA384_VALUE:
             return (TPM2B_DIGEST *)&command->sha384RpHash;
+#endif
+#if ALG_SHA3_384
+        case ALG_SHA3_384_VALUE:
+            return (TPM2B_DIGEST *)&command->sha3_384RpHash;
 #endif
 #if ALG_SHA512
         case ALG_SHA512_VALUE:

@@ -877,6 +877,9 @@ typedef union {                                     // Table 2:75
 #if       ALG_SHA384
     BYTE                    sha384[SHA384_DIGEST_SIZE];
 #endif // ALG_SHA384
+#if       ALG_SHA3_384
+    BYTE                    sha3_384[SHA3_384_DIGEST_SIZE];
+#endif // ALG_SHA3_384
 #if       ALG_SHA512
     BYTE                    sha512[SHA512_DIGEST_SIZE];
 #endif // ALG_SHA512

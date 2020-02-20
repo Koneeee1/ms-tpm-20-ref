@@ -54,6 +54,9 @@ HASH_DEF_TEMPLATE(SHA256);
 #if     ALG_SHA384
 HASH_DEF_TEMPLATE(SHA384);
 #endif
+#if     ALG_SHA3_384
+HASH_DEF_TEMPLATE(SHA3_384);
+#endif
 #if     ALG_SHA512
 HASH_DEF_TEMPLATE(SHA512);
 #endif
@@ -116,6 +119,11 @@ CryptGetHashDef(
             retVal = &SHA384_Def;
             break;
 #endif
+#if     ALG_SHA3_384
+        case ALG_SHA3_384_VALUE:
+            retVal = &SHA3_384_Def;
+            break;
+#endif
 #if     ALG_SHA512
         case ALG_SHA512_VALUE:
             retVal = &SHA512_Def;
@@ -150,6 +158,9 @@ CryptHashIsValidAlg(
 #endif
 #if     ALG_SHA384
         case ALG_SHA384_VALUE:
+#endif
+#if     ALG_SHA3_384
+        case ALG_SHA3_384_VALUE:
 #endif
 #if     ALG_SHA512
         case ALG_SHA512_VALUE:

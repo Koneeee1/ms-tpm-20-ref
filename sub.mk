@@ -1,7 +1,7 @@
 WARNS 			?= 1
 NOWERROR 		?= 1
 CFG_TA_DEBUG 		?= 1
-CFG_TEE_TA_LOG_LEVEL 	?= 1
+CFG_TEE_TA_LOG_LEVEL 	?= 3
 
 cflags-y += -D_ARM_ \
 		-DCFG_TEE_TA_LOG_LEVEL=$(CFG_TEE_TA_LOG_LEVEL) \

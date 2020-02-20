@@ -189,6 +189,8 @@
 #ifndef CONTEXT_HASH_ALGORITHM
 #   if defined ALG_SHA512 && ALG_SHA512 == YES
 #       define CONTEXT_HASH_ALGORITHM    SHA512
+#   elif defined ALG_SHA3_384 && ALG_SHA3_384 == YES
+#       define CONTEXT_HASH_ALGORITHM    SHA3_384
 #   elif defined ALG_SHA384 && ALG_SHA384 == YES
 #       define CONTEXT_HASH_ALGORITHM    SHA384
 #   elif defined ALG_SHA256 && ALG_SHA256 == YES

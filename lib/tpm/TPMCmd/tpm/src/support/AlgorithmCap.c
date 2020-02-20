@@ -82,6 +82,9 @@ static const ALGORITHM    s_algorithms[] =
 #if ALG_SHA384
     {TPM_ALG_SHA384,        TPMA_ALGORITHM_INITIALIZER(0, 0, 1, 0, 0, 0, 0, 0, 0)},
 #endif
+#if ALG_SHA3_384
+    {TPM_ALG_SHA3_384,      TPMA_ALGORITHM_INITIALIZER(0, 0, 1, 0, 0, 0, 0, 0, 0)},
+#endif
 #if ALG_SHA512
     {TPM_ALG_SHA512,        TPMA_ALGORITHM_INITIALIZER(0, 0, 1, 0, 0, 0, 0, 0, 0)},
 #endif

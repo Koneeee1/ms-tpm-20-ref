@@ -24,11 +24,11 @@ FTPM_WARNING_SUPPRESS = -Wno-cast-align \
 
 cflags-y += $(FTPM_FLAGS) $(WOLF_SSL_FLAGS) $(FTPM_INCLUDES) $(FTPM_WARNING_SUPPRESS)
 
-ifeq ($(CFG_TA_DEBUG),y)
+#ifeq ($(CFG_TA_DEBUG),y)
 cflags-y += $(FTPM_DEBUG)
-else
-cflags-y += $(FTPM_RELEASE)
-endif
+#else
+#cflags-y += $(FTPM_RELEASE)
+#endif
 
 global-incdirs-y += TPMCmd/tpm/include
 global-incdirs-y += TPMCmd/tpm/include/ltc

@@ -62,6 +62,7 @@
 #endif
 #if defined(TPM_ALG_SHA384) || defined(TPM_ALG_SHA512)
     #define WOLFSSL_SHA384
+    #define WOLFSSL_SHA3_384
     #define WOLFSSL_SHA512
 #endif
 #ifdef TPM_ALG_TDES

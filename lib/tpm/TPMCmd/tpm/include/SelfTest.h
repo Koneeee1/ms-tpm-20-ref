@@ -130,6 +130,10 @@ typedef struct {
 #       define  DEFAULT_TEST_HASH               ALG_SHA384_VALUE
 #       define  DEFAULT_TEST_DIGEST_SIZE        SHA384_DIGEST_SIZE
 #       define  DEFAULT_TEST_HASH_BLOCK_SIZE    SHA384_BLOCK_SIZE
+#elif ALG_SHA3_384
+#       define  DEFAULT_TEST_HASH               ALG_SHA3_384_VALUE
+#       define  DEFAULT_TEST_DIGEST_SIZE        SHA3_384_DIGEST_SIZE
+#       define  DEFAULT_TEST_HASH_BLOCK_SIZE    SHA3_384_BLOCK_SIZE
 #elif ALG_SHA256
 #       define  DEFAULT_TEST_HASH               ALG_SHA256_VALUE
 #       define  DEFAULT_TEST_DIGEST_SIZE        SHA256_DIGEST_SIZE

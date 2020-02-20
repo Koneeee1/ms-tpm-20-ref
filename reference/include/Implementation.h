@@ -232,6 +232,8 @@
 #define ALG_SHA1                        ALG_YES
 #define ALG_SHA256                      ALG_YES
 #define ALG_SHA384                      ALG_YES
+//#define ALG_SHA3_384                    ALG_NO
+#define ALG_SHA3_384                    ALG_YES
 #define ALG_SHA512                      ALG_YES
 #define ALG_SM2                         (ALG_NO && ALG_ECC)
 #define ALG_SM3_256                     ALG_NO
@@ -288,6 +290,10 @@ typedef UINT16                          TPM_ALG_ID;
 #if         ALG_SHA384
 #define TPM_ALG_SHA384                  (TPM_ALG_ID)(ALG_SHA384_VALUE)
 #endif   // ALG_SHA384
+#define     ALG_SHA3_384_VALUE          0x0028
+#if         ALG_SHA3_384
+#define TPM_ALG_SHA3_384                (TPM_ALG_ID)(ALG_SHA3_384_VALUE)
+#endif   // ALG_SHA3_384
 #define     ALG_SHA512_VALUE            0x000D
 #if         ALG_SHA512
 #define TPM_ALG_SHA512                  (TPM_ALG_ID)(ALG_SHA512_VALUE)
@@ -434,6 +440,14 @@ typedef UINT16              TPM_ECC_CURVE;
             0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x02, 0x05,                        \
             0x00, 0x04, 0x30
 
+// https://trustedcomputinggroup.org/wp-content/uploads/TCG_Algorithm_Registry_Rev_1.24.pdf - Defines for SHA3_384 Hash Values
+#define SHA3_384_DIGEST_SIZE  48
+#define SHA3_384_BLOCK_SIZE   104
+#define SHA3_384_DER_SIZE     19
+#define SHA3_384_DER          \
+            0x30, 0x41, 0x30, 0x0D, 0x06, 0x09, 0x60, 0x86,                        \
+            0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x09, 0x05,                        \
+            0x00, 0x04, 0x30
 // Table 1:15 - Defines for SHA512 Hash Values
 #define SHA512_DIGEST_SIZE  64
 #define SHA512_BLOCK_SIZE   128
@@ -1098,7 +1112,7 @@ typedef UINT32                              TPM_CC;
 #define COMMAND_COUNT       (LIBRARY_COMMAND_ARRAY_SIZE + VENDOR_COMMAND_ARRAY_SIZE)
 
 #define HASH_COUNT          \
-            (ALG_SHA1 + ALG_SHA256 + ALG_SHA384 + ALG_SHA512 + ALG_SM3_256)
+            (ALG_SHA1 + ALG_SHA256 + ALG_SHA384 + ALG_SHA3_384 + ALG_SHA512 + ALG_SM3_256)
 
 #define MAX_HASH_BLOCK_SIZE \
             (MAX(ALG_SHA1    * SHA1_BLOCK_SIZE,                                    \
