@@ -33,7 +33,6 @@
 #include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/logging.h>
 
-#include <csu.h>
 #include <mm/core_memprot.h>
 #include <platform_config.h>
 
