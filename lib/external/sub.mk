@@ -22,10 +22,6 @@ cflags-y += $(WOLF_SSL_FLAGS) $(WOLF_WARNING_SUPPRESS)
 
 global-incdirs-y += wolfssl
 
-
-libdirs += /storage/ge34yuf/MLE_Download/optee-for-zuplus_src_v20191213-rc/ps/petalinux/build/xsdk/optee_os_bsp/psu_cortexa53_0/lib
-libnames += xilfpga xilsecure xilskey xilisf xil utils
-
 srcs-y += wolfssl/wolfcrypt/src/aes.c
 srcs-y += wolfssl/wolfcrypt/src/asn.c
 srcs-y += wolfssl/wolfcrypt/src/ecc.c
