@@ -66,7 +66,7 @@ int wc_InitSha3_384(wc_Sha3* sha, void* heap, int devId)
 
     // Initialize operation handle
     sha->operation  = (TEE_OperationHandle)NULL;
-    TEE_AllocateOperation(&sha->operation, TEE_ALG_SHA384, TEE_MODE_DIGEST, 0);
+    TEE_AllocateOperation(&sha->operation, TEE_ALG_SHA3_384, TEE_MODE_DIGEST, 0);
 
     #ifdef LOCALDEBUG
 	DMSG("wc_InitSha3_384 sha->operation %x", sha->operation);
