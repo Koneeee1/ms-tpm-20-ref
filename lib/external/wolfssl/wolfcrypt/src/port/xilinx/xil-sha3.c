@@ -33,6 +33,17 @@
 #include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/logging.h>
 
+#include <csu.h>
+#include <mm/core_memprot.h>
+#include <platform_config.h>
+
+#undef __KERNEL__
+#include <xparameters.h>
+#include <xsecure.h>
+#undef dsb
+#undef isb
+#define __KERNEL__
+
 #if !defined(WOLFSSL_NOSHA3_224) || !defined(WOLFSSL_NOSHA3_256) \
     || !defined(WOLFSSL_NOSHA3_512)
     #error sizes of SHA3 other than 384 are not supported
@@ -61,7 +72,9 @@ int wc_InitSha3_384(wc_Sha3* sha, void* heap, int devId)
     }
 
     /* XST_SUCCESS is success macro from Xilinx header */
-    if (XCsuDma_CfgInitialize(&(sha->dma), con, con->BaseAddress) !=
+    if (XCsuDma_CfgInitialize(&(sha->dma), con,
+			(vaddr_t) phys_to_virt_io(CSUDMA_BASE),
+			(vaddr_t) phys_to_virt_io(CSU_BASE)) !=
             XST_SUCCESS) {
         WOLFSSL_MSG("Unable to initialize CsuDma");
         return BAD_STATE_E;
