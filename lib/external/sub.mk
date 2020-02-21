@@ -6,7 +6,9 @@ WOLF_SSL_FLAGS = -DCTYPE_USER \
 		 -DSINGLE_THREADED \
 		 -DSTRING_USER \
 		 -DTIME_OVERRIDES \
-		 -DWOLFSSL_USER_SETTINGS
+		 -DWOLFSSL_USER_SETTINGS \
+		 -DWOLFSSL_SHA3 \
+		 -DWOLFSSL_XILINX_CRYPT
 
 # Wolfcrypt has multiple unused functions, unfortunately the OPTEE build system
 # can only turn off compiler flags for files in the same directory as the
@@ -26,6 +28,7 @@ srcs-y += wolfssl/wolfcrypt/src/ecc.c
 srcs-y += wolfssl/wolfcrypt/src/integer.c
 srcs-y += wolfssl/wolfcrypt/src/memory.c
 srcs-y += wolfssl/wolfcrypt/src/sha.c
+srcs-y += wolfssl/wolfcrypt/src/sha3.c
 srcs-y += wolfssl/wolfcrypt/src/sha256.c
 srcs-y += wolfssl/wolfcrypt/src/sha512.c
 srcs-y += wolfssl/wolfcrypt/src/tfm.c
