@@ -33,15 +33,6 @@
 #include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/logging.h>
 
-#include <mm/core_memprot.h>
-#include <platform_config.h>
-
-#undef __KERNEL__
-#include <xparameters.h>
-#include <xsecure.h>
-#undef dsb
-#undef isb
-#define __KERNEL__
 
 #if !defined(WOLFSSL_NOSHA3_224) || !defined(WOLFSSL_NOSHA3_256) \
     || !defined(WOLFSSL_NOSHA3_512)
@@ -56,7 +47,32 @@
  */
 int wc_InitSha3_384(wc_Sha3* sha, void* heap, int devId)
 {
-    XCsuDma_Config* con;
+
+	TEE_OperationHandle operation = (TEE_OperationHandle)NULL;
+	TEE_Result ret;
+
+
+	IMSG("Testing algo %x", TEE_ALG_SHA3_384);
+	IMSG("TEE_ALG_SHA3_384 Hashing abc, Expecting \n\
+ec01498288516fc9\
+26459f58e2c6ad8d\
+f9b473cb0fc08c25\
+96da7cf0e49be4b2\
+98d88cea927ac7f5\
+39f1edf228376d25");
+
+	ret = TEE_AllocateOperation(&operation, TEE_ALG_SHA3_384, TEE_MODE_DIGEST, 0);
+	ret = TEE_DigestDoFinal(operation, sha3msg2, 3, hash, &hash_len);
+	TEE_FreeOperation(operation);
+
+
+	IMSG("TEE_ALG_SHA3_384 result:");
+	for(uint8_t y = 0; y < 48; y += 8) {
+		IMSG("%02x%02x%02x%02x%02x%02x%02x%02x", hash[y], hash[y+1], hash[y+2], hash[y+3], hash[y+4], hash[y+5], hash[y+6], hash[y+7]);
+	}
+
+
+  /*  XCsuDma_Config* con;
 
     (void)heap;
     (void)devId;
@@ -70,7 +86,6 @@ int wc_InitSha3_384(wc_Sha3* sha, void* heap, int devId)
         return BAD_STATE_E;
     }
 
-    /* XST_SUCCESS is success macro from Xilinx header */
     if (XCsuDma_CfgInitialize(&(sha->dma), con,
 			(vaddr_t) phys_to_virt_io(CSUDMA_BASE),
 			(vaddr_t) phys_to_virt_io(CSU_BASE)) !=
@@ -81,7 +96,7 @@ int wc_InitSha3_384(wc_Sha3* sha, void* heap, int devId)
 
     XSecure_Sha3Initialize(&(sha->hw), &(sha->dma));
     XSecure_Sha3Start(&(sha->hw));
-
+*/
     return 0;
 }
 
