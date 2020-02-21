@@ -26,7 +26,7 @@
 
 #include <wolfssl/wolfcrypt/settings.h>
 
-#if !defined(NO_AES) && defined(WOLFSSL_XILINX_CRYPT)
+#if !defined(NO_AES) && defined(WOLFSSL_XILINX_CRYPT_AES)
 
 #include <wolfssl/wolfcrypt/aes.h>
 

@@ -24,13 +24,10 @@
     #include <config.h>
 #endif
 
-#include <wolfssl/wolfcrypt/settings.h>
+//#include <wolfssl/wolfcrypt/settings.h>
 
 
-#if defined(WOLFSSL_SHA3) && defined(WOLFSSL_XILINX_CRYPT)
-
-#include <tee_internal_api.h>
-#include <tee_internal_api_extensions.h>
+#if defined(WOLFSSL_SHA3) && defined(WOLFSSL_XILINX_CRYPT_SHA)
 #include <wolfssl/wolfcrypt/sha3.h>
 #include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/logging.h>
@@ -41,68 +38,42 @@
     #error sizes of SHA3 other than 384 are not supported
 #endif
 
+#define LOCALDEBUG
+
+// Some steps are not necessary using Xilinx HA, but they keep up with the interface implemented in wolfssl
 /* Initialize hardware for SHA3 operations
  *
  * sha   SHA3 structure to initialize
  * heap  memory heap hint to use
  * devId used for async operations (currently not supported here)
+ * operation handle for TEE Operation Specification
  */
 int wc_InitSha3_384(wc_Sha3* sha, void* heap, int devId)
 {
-
-	TEE_OperationHandle operation = (TEE_OperationHandle)NULL;
-	TEE_Result ret;
-uint8_t sha3msg2[] = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
-uint8_t sha3hash2[] = "991c665755eb3a4b 6bbdfb75c78a492e 8c56a22c5c4d7e42 9bfdbc32b9d4ad5a a04a1f076e62fea1 9eef51acd0657c22";
-	char hash[48] = {0}; /*sha1*/
-	uint32_t hash_len = 48;
-
-	IMSG("Testing algo %x", TEE_ALG_SHA3_384);
-	IMSG("TEE_ALG_SHA3_384 Hashing abc, Expecting \n\
-ec01498288516fc9\
-26459f58e2c6ad8d\
-f9b473cb0fc08c25\
-96da7cf0e49be4b2\
-98d88cea927ac7f5\
-39f1edf228376d25");
-
-	ret = TEE_AllocateOperation(&operation, TEE_ALG_SHA3_384, TEE_MODE_DIGEST, 0);
-	ret = TEE_DigestDoFinal(operation, sha3msg2, 3, hash, &hash_len);
-	TEE_FreeOperation(operation);
-
-
-	IMSG("TEE_ALG_SHA3_384 result:");
-	for(uint8_t y = 0; y < 48; y += 8) {
-		IMSG("%02x%02x%02x%02x%02x%02x%02x%02x", hash[y], hash[y+1], hash[y+2], hash[y+3], hash[y+4], hash[y+5], hash[y+6], hash[y+7]);
-	}
-
-
-  /*  XCsuDma_Config* con;
-
-    (void)heap;
-    (void)devId;
-
+	int ret = 0;
     if (sha == NULL) {
         return BAD_FUNC_ARG;
     }
-
-    if ((con = XCsuDma_LookupConfig(0)) == NULL) {
-        WOLFSSL_MSG("Unable to look up configure for SHA3");
-        return BAD_STATE_E;
+    sha->heap = heap;
+    
+    // Reset state data for each block 
+    for (uint8_t i = 0; i < 25; i++) {
+        sha->s[i] = 0;
     }
+    
+    // Place next message byte at index zero
+    sha->i = 0;
 
-    if (XCsuDma_CfgInitialize(&(sha->dma), con,
-			(vaddr_t) phys_to_virt_io(CSUDMA_BASE),
-			(vaddr_t) phys_to_virt_io(CSU_BASE)) !=
-            XST_SUCCESS) {
-        WOLFSSL_MSG("Unable to initialize CsuDma");
-        return BAD_STATE_E;
-    }
+    // Initialize operation handle
+    sha->operation  = (TEE_OperationHandle)NULL;
+    TEE_AllocateOperation(&sha->operation, TEE_ALG_SHA384, TEE_MODE_DIGEST, 0);
 
-    XSecure_Sha3Initialize(&(sha->hw), &(sha->dma));
-    XSecure_Sha3Start(&(sha->hw));
-*/
-    return 0;
+    #ifdef LOCALDEBUG
+	DMSG("wc_InitSha3_384 sha->operation %x", sha->operation);
+    #endif
+    return ret;
+
+
 }
 
 
@@ -117,8 +88,15 @@ int wc_Sha3_384_Update(wc_Sha3* sha, const byte* data, word32 len)
     if (sha == NULL ||  (data == NULL && len > 0)) {
         return BAD_FUNC_ARG;
     }
-    //XSecure_Sha3Update(&(sha->hw), (byte*)data, len);
 
+    #ifdef LOCALDEBUG
+	DMSG("wc_Sha3_384_Update with %x new Bytes", len);
+    for(uint8_t y = 0; y < len; y += 8) {
+		DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", data[y], data[y+1], data[y+2], data[y+3], data[y+4], data[y+5], data[y+6], data[y+7]);
+	}
+	#endif
+
+    TEE_DigestUpdate(sha->operation, data, len);
     return 0;
 }
 
@@ -133,9 +111,21 @@ int wc_Sha3_384_Final(wc_Sha3* sha, byte* out)
     if (sha == NULL || out == NULL) {
         return BAD_FUNC_ARG;
     }
-    //XSecure_Sha3Finish(&(sha->hw), out);
+    size_t hash_len = 48;
 
-    return wc_InitSha3_384(sha, NULL, INVALID_DEVID);
+    // TEE expects data pointer in DoFinal call so we just give it empty data with length 0    
+
+    void *null_ptr = NULL;
+    TEE_DigestDoFinal(sha->operation, null_ptr, 0, out, &hash_len);
+    
+    #ifdef LOCALDEBUG	
+    DMSG("wc_Sha3_384_Final creates digest");
+    for(uint8_t y = 0; y < 48; y += 8) {
+		DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", out[y], out[y+1], out[y+2], out[y+3], out[y+4], out[y+5], out[y+6], out[y+7]);
+	}
+    #endif
+
+    return 0;
 }
 
 
@@ -145,6 +135,7 @@ int wc_Sha3_384_Final(wc_Sha3* sha, byte* out)
  */
 void wc_Sha3_384_Free(wc_Sha3* sha)
 {
+    TEE_FreeOperation(sha->operation);
     (void)sha;
     /* nothing to free yet */
 }

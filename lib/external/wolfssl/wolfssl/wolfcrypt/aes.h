@@ -64,7 +64,7 @@
 #endif /* WOLFSSL_AESNI */
 
 
-#ifdef WOLFSSL_XILINX_CRYPT
+#ifdef WOLFSSL_XILINX_CRYPT_AES
 #include "xsecure_aes.h"
 #endif
 
@@ -166,7 +166,7 @@ typedef struct Aes {
 #if defined(WOLFSSL_AES_COUNTER) || defined(WOLFSSL_AES_CFB)
     word32  left;            /* unused bytes left from last call */
 #endif
-#ifdef WOLFSSL_XILINX_CRYPT
+#ifdef WOLFSSL_XILINX_CRYPT_AES
     XSecure_Aes xilAes;
     XCsuDma     dma;
     word32      key_init[8];
@@ -262,7 +262,7 @@ WOLFSSL_API int wc_AesEcbDecrypt(Aes* aes, byte* out,
 #endif
 
 #ifdef HAVE_AESGCM
-#ifdef WOLFSSL_XILINX_CRYPT
+#ifdef WOLFSSL_XILINX_CRYPT_AES
  WOLFSSL_API int  wc_AesGcmSetKey_ex(Aes* aes, const byte* key, word32 len,
          word32 kup);
 #elif defined(WOLFSSL_AFALG_XILINX_AES)

@@ -40,6 +40,8 @@
     #include <wolfssl/wolfcrypt/async.h>
 #endif
 
+#include <tee_internal_api.h>
+#include <tee_internal_api_extensions.h>
 /* in bytes */
 enum {
     WC_SHA3_224              = WC_HASH_TYPE_SHA3_224,
@@ -82,11 +84,11 @@ enum {
 
 
 
-#ifdef WOLFSSL_XILINX_CRYPT
-    #include "wolfssl/wolfcrypt/port/xilinx/xil-sha3.h"
-#elif defined(WOLFSSL_AFALG_XILINX_SHA3)
-    #include <wolfssl/wolfcrypt/port/af_alg/afalg_hash.h>
-#else
+//#ifdef WOLFSSL_XILINX_CRYPT_SHA
+//    #include "wolfssl/wolfcrypt/port/xilinx/xil-sha3.h"
+//#elif defined(WOLFSSL_AFALG_XILINX_SHA3)
+//    #include <wolfssl/wolfcrypt/port/af_alg/afalg_hash.h>
+//#else
 /* Sha3 digest */
 typedef struct Sha3 {
     /* State data that is processed for each block. */
@@ -104,6 +106,8 @@ typedef struct Sha3 {
 #if defined(WOLFSSL_HASH_FLAGS) || defined(WOLF_CRYPTO_CB)
     word32 flags; /* enum wc_HashFlags in hash.h */
 #endif
+#ifdef WOLFSSL_XILINX_CRYPT_SHA
+    TEE_OperationHandle operation;
 } wc_Sha3;
 #endif
 

@@ -2266,7 +2266,7 @@ int wc_RsaPrivateKeyDecode(const byte* input, word32* inOutIdx, RsaKey* key,
         SkipInt(input, inOutIdx, inSz) < 0 )  return ASN_RSA_KEY_E;
 #endif
 
-#ifdef WOLFSSL_XILINX_CRYPT
+#ifdef WOLFSSL_XILINX_CRYPT_RSA
     if (wc_InitRsaHw(key) != 0) {
         return BAD_STATE_E;
     }
@@ -3946,7 +3946,7 @@ int wc_RsaPublicKeyDecodeRaw(const byte* n, word32 nSz, const byte* e,
     }
 #endif /* HAVE_WOLF_BIGINT */
 
-#ifdef WOLFSSL_XILINX_CRYPT
+#ifdef WOLFSSL_XILINX_CRYPT_RSA
     if (wc_InitRsaHw(key) != 0) {
         return BAD_STATE_E;
     }

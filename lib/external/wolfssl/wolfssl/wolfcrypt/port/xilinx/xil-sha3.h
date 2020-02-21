@@ -23,18 +23,18 @@
 #ifndef WOLF_XIL_CRYPT_SHA3_H
 #define WOLF_XIL_CRYPT_SHA3_H
 
-#ifdef WOLFSSL_SHA3
-#include "xsecure_sha.h"
-
-#ifdef __cplusplus
-    extern "C" {
-#endif
+//#ifdef WOLFSSL_SHA3
+//#include "xsecure_sha.h"
+//
+//#ifdef __cplusplus
+//    extern "C" {
+//#endif
 
 /* Sha3 digest */
-typedef struct Sha3 {
-    XSecure_Sha3 hw;
-    XCsuDma      dma;
-} wc_Sha3;
+//typedef struct Sha3 {
+//    XSecure_Sha3 hw;
+//    XCsuDma      dma;
+//} wc_Sha3;
 
 #ifdef __cplusplus
     } /* extern "C" */

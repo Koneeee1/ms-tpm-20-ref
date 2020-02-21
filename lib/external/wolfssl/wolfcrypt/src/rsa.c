@@ -317,7 +317,7 @@ int wc_InitRsaKey_ex(RsaKey* key, void* heap, int devId)
     }
 #endif
 
-#ifdef WOLFSSL_XILINX_CRYPT
+#ifdef WOLFSSL_XILINX_CRYPT_RSA
     key->pubExp = 0;
     key->mod    = NULL;
 #endif
@@ -359,7 +359,7 @@ int wc_InitRsaKey_Id(RsaKey* key, unsigned char* id, int len, void* heap,
 #endif
 
 
-#ifdef WOLFSSL_XILINX_CRYPT
+#ifdef WOLFSSL_XILINX_CRYPT_RSA
 #define MAX_E_SIZE 4
 /* Used to setup hardware state
  *
@@ -474,7 +474,7 @@ int wc_FreeRsaKey(RsaKey* key)
     mp_clear(&key->e);
     mp_clear(&key->n);
 
-#ifdef WOLFSSL_XILINX_CRYPT
+#ifdef WOLFSSL_XILINX_CRYPT_RSA
     XFREE(key->mod, key->heap, DYNAMIC_TYPE_KEY);
     key->mod = NULL;
 #endif
@@ -1403,7 +1403,7 @@ static int wc_RsaUnPad_ex(byte* pkcsBlock, word32 pkcsBlockLen, byte** out,
     return ret;
 }
 
-#if defined(WOLFSSL_XILINX_CRYPT)
+#if defined(WOLFSSL_XILINX_CRYPT_RSA)
 /*
  * Xilinx hardened crypto acceleration.
  *
@@ -1911,7 +1911,7 @@ static int wc_RsaFunctionSync(const byte* in, word32 inLen, byte* out,
     #endif
         case RSA_PUBLIC_ENCRYPT:
         case RSA_PUBLIC_DECRYPT:
-        #ifdef WOLFSSL_XILINX_CRYPT
+        #ifdef WOLFSSL_XILINX_CRYPT_RSA
             ret = wc_RsaFunctionXil(in, inLen, out, outLen, type, key, rng);
         #else
             if (mp_exptmod(tmp, &key->e, &key->n, tmp) != MP_OKAY)
@@ -3547,7 +3547,7 @@ int wc_MakeRsaKey(RsaKey* key, int size, long e, WC_RNG* rng)
         return err;
     }
 
-#ifdef WOLFSSL_XILINX_CRYPT
+#ifdef WOLFSSL_XILINX_CRYPT_RSA
     if (wc_InitRsaHw(key) != 0) {
         return BAD_STATE_E;
     }
