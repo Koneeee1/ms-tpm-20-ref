@@ -29,6 +29,8 @@
 
 #if defined(WOLFSSL_SHA3) && defined(WOLFSSL_XILINX_CRYPT)
 
+#include <tee_internal_api.h>
+#include <tee_internal_api_extensions.h>
 #include <wolfssl/wolfcrypt/sha3.h>
 #include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/logging.h>
@@ -50,7 +52,10 @@ int wc_InitSha3_384(wc_Sha3* sha, void* heap, int devId)
 
 	TEE_OperationHandle operation = (TEE_OperationHandle)NULL;
 	TEE_Result ret;
-
+uint8_t sha3msg2[] = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
+uint8_t sha3hash2[] = "991c665755eb3a4b 6bbdfb75c78a492e 8c56a22c5c4d7e42 9bfdbc32b9d4ad5a a04a1f076e62fea1 9eef51acd0657c22";
+	char hash[48] = {0}; /*sha1*/
+	uint32_t hash_len = 48;
 
 	IMSG("Testing algo %x", TEE_ALG_SHA3_384);
 	IMSG("TEE_ALG_SHA3_384 Hashing abc, Expecting \n\
