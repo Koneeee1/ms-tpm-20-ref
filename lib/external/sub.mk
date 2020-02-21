@@ -35,3 +35,5 @@ srcs-y += wolfssl/wolfcrypt/src/tfm.c
 srcs-y += wolfssl/wolfcrypt/src/wolfmath.c
 srcs-y += wolfssl/wolfcrypt/src/des3.c
 srcs-y += wolfssl/wolfcrypt/src/random.c
+srcs-y += wolfssl/wolfcrypt/src/port/xilinx/xil-sha3.c
+srcs-y += wolfssl/wolfcrypt/src/port/xilinx/xil-aesgcm.c
