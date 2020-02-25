@@ -238,7 +238,7 @@ CryptSymmetricEncrypt(
             uint32_t outSize = dSize;
             uint8_t tag[16] = { 0 };
             uint32_t t_len = 16;
-            ret = TEE_AEEncryptFinal(handle2, dIn, dSize, dOut, &outSize, t, &t_len);
+            ret = TEE_AEEncryptFinal(handle2, dIn, dSize, dOut, &outSize, tag, &t_len);
             } else {
                 for(; dSize > 0; dSize -= blockSize)
                 {
