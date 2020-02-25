@@ -42,7 +42,7 @@
 #include "Tpm.h"
 
 #include "CryptSym.h"
-
+#include <tee_internal_api.h>
 
 //** Initialization and Data Access Functions
 //
@@ -194,20 +194,67 @@ CryptSymmetricEncrypt(
     {
 #if     ALG_CTR
         case ALG_CTR_VALUE:
-            for(; dSize > 0; dSize -= blockSize)
-            {
-                // Encrypt the current value of the IV(counter)
-                ENCRYPT(&keySchedule, iv, tmp);
+            DMSG("AES_CTR_ENCRYPT");
+            // Xilinx requires 96 bit IV and 256 bit key
+            if((ivInOut->t.size == 12) && (keySizeInBits == 256)) {
+            DMSG("USING MLE TEE INTERFACE");
 
-                //increment the counter (counter is big-endian so start at end)
-                for(i = blockSize - 1; i >= 0; i--)
-                    if((iv[i] += 1) != 0)
-                        break;
+            TEE_Result ret = TEE_SUCCESS;
+            TEE_OperationHandle handle2 = (TEE_OperationHandle) NULL;
+            TEE_ObjectHandle key_handle = (TEE_ObjectHandle) NULL;
+            ret = TEE_AllocateOperation (&handle2, TEE_ALG_ZYNQMP_AES_GCM, TEE_MODE_ENCRYPT, 256);
+            if (ret != TEE_SUCCESS) {
+                DMSG("Error %x", ret);
+            }
+            DMSG("1");
+            // Allocate the key    
+	        ret = TEE_AllocateTransientObject(TEE_TYPE_AES, 256, &key_handle);
+	        if (ret != TEE_SUCCESS) {
+                DMSG("Failed to allocate transient object");
+	        }
+            TEE_Attribute aes_attr;
 
-                // XOR the encrypted counter value with input and put into output
-                pT = tmp;
-                for(i = (dSize < blockSize) ? dSize : blockSize; i > 0; i--)
-                    *dOut++ = *dIn++ ^ *pT++;
+            DMSG("2");
+	        TEE_InitRefAttribute(&aes_attr, TEE_ATTR_SECRET_VALUE, key, 32);
+
+            DMSG("3");    
+            // Set key
+            ret = TEE_PopulateTransientObject(key_handle, &aes_attr, 1);
+            DMSG("4");
+
+            
+            ret = TEE_SetOperationKey(handle2, key_handle);
+            if (ret != TEE_SUCCESS) {
+	            DMSG("TEE_SetOperationKey failed %d", ret);
+            }
+            DMSG("5");
+            ret = TEE_AEInit(handle2, iv, 12, 128, 0, 0);
+            if (ret != TEE_SUCCESS) {
+                TEE_FreeOperation(handle2);
+                DMSG("Error AEInit %x", ret);
+            }
+    
+            DMSG("6");
+            uint32_t outSize = dSize;
+            uint8_t tag[16] = { 0 };
+            uint32_t t_len = 16;
+            ret = TEE_AEEncryptFinal(handle2, dIn, dSize, dOut, &outSize, t, &t_len);
+            } else {
+                for(; dSize > 0; dSize -= blockSize)
+                {
+                    // Encrypt the current value of the IV(counter)
+                    ENCRYPT(&keySchedule, iv, tmp);
+
+                    //increment the counter (counter is big-endian so start at end)
+                    for(i = blockSize - 1; i >= 0; i--)
+                        if((iv[i] += 1) != 0)
+                            break;
+
+                    // XOR the encrypted counter value with input and put into output
+                    pT = tmp;
+                    for(i = (dSize < blockSize) ? dSize : blockSize; i > 0; i--)
+                        *dOut++ = *dIn++ ^ *pT++;
+                }
             }
             break;
 #endif
