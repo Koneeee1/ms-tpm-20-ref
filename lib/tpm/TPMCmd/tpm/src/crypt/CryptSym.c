@@ -196,9 +196,11 @@ CryptSymmetricEncrypt(
         case ALG_CTR_VALUE:
             DMSG("AES_CTR_ENCRYPT");
             // Xilinx requires 96 bit IV and 256 bit key
-            if((ivInOut->t.size == 12) && (keySizeInBits == 256)) {
+            if(keySizeInBits == 256) {
             DMSG("USING MLE TEE INTERFACE");
-
+            if (ivInOut->t.size != 12) {
+	        DMSG("Changing size %x to 12", ivInOut->t.size); 
+	    }
             TEE_Result ret = TEE_SUCCESS;
             TEE_OperationHandle handle2 = (TEE_OperationHandle) NULL;
             TEE_ObjectHandle key_handle = (TEE_ObjectHandle) NULL;
