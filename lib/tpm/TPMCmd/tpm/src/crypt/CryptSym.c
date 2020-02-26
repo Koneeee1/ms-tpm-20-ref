@@ -274,6 +274,13 @@ for(uint8_t y = 0; y < p_len; y += 8) {
 		DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", c[y], c[y+1], c[y+2], c[y+3], c[y+4], c[y+5], c[y+6], c[y+7]);
 	}
 
+    // Release the session resources
+    if (key_handle != TEE_HANDLE_NULL) {
+        TEE_FreeTransientObject(key_handle);
+    }
+    if (handle2 != TEE_HANDLE_NULL) {
+        TEE_FreeOperation(handle2);
+    }
     memcpy(dOut, c, c_len);
     
             } else {
@@ -575,6 +582,13 @@ CryptSymmetricDecrypt(
 		        DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", c[y], c[y+1], c[y+2], c[y+3], c[y+4], c[y+5], c[y+6], c[y+7]);
 	        }
 
+	    // Release the session resources
+	    if (key_handle != TEE_HANDLE_NULL) {
+		TEE_FreeTransientObject(key_handle);
+	    }
+	    if (handle2 != TEE_HANDLE_NULL) {
+		TEE_FreeOperation(handle2);
+	    }
             memcpy(dOut, c, c_len);
     
             } else {
