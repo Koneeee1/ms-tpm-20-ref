@@ -222,6 +222,9 @@ CryptSymmetricEncrypt(
             DMSG("3");    
             // Set key
             ret = TEE_PopulateTransientObject(key_handle, &aes_attr, 1);
+	    if (ret != TEE_SUCCESS) {
+	      DMSG("Error TEE_PopulateTransientObject %x", ret);
+	    }
             DMSG("4");
 
             
