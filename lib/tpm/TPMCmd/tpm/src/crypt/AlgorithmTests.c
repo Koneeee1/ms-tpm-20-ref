@@ -40,7 +40,7 @@
 
 //** Includes and Defines
 #include    "Tpm.h"
-
+#include <tee_internal_api.h>
 #define     SELF_TEST_DATA
 
 #if SELF_TEST
@@ -189,18 +189,31 @@ TestSymmetricAlgorithm(
     static BYTE                 decrypted[MAX_SYM_BLOCK_SIZE * 2];
     static TPM2B_IV             iv;
 //
+    DMSG("Testing symmetric algorithm with TPM_ALG_ID %0x", mode);
     // Get the appropriate IV
     iv.t.size = (UINT16)MakeIv(mode, test->ivSize, iv.t.buffer);
+    
+    //AES_GCM and AES_CTR only match for iv_length = 12    
+    if((mode == 0x40) && (test->keyBits == 256)) {
+        iv.t.size = 12;
+    }
 
     // Encrypt known data
     CryptSymmetricEncrypt(encrypted, test->alg, test->keyBits, test->key, &iv,
                           mode, test->dataInOutSize, test->dataIn);
     // Check that it matches the expected value
     if(!MemoryEqual(encrypted, test->dataOut[mode - ALG_CTR_VALUE],
-                    test->dataInOutSize))
+                    test->dataInOutSize)) {
+        DMSG("Expected value doesnt match");    
         SELF_TEST_FAILURE;
+    }
     // Reinitialize the iv for decryption
     MakeIv(mode, test->ivSize, iv.t.buffer);
+    //AES_GCM and AES_CTR only match for iv_length = 12    
+    if((mode == 0x40) && (test->keyBits == 256)) {
+        iv.t.size = 12;
+    }
+
     CryptSymmetricDecrypt(decrypted, test->alg, test->keyBits, test->key, &iv,
                           mode, test->dataInOutSize,
                           test->dataOut[mode - ALG_CTR_VALUE]);

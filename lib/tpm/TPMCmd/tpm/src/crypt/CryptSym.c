@@ -40,9 +40,10 @@
 
 //** Includes, Defines, and Typedefs
 #include "Tpm.h"
-
+#include <string.h>
 #include "CryptSym.h"
 #include <tee_internal_api.h>
+#include <tee_internal_api_extensions.h>
 
 //** Initialization and Data Access Functions
 //
@@ -194,56 +195,87 @@ CryptSymmetricEncrypt(
     {
 #if     ALG_CTR
         case ALG_CTR_VALUE:
-            DMSG("AES_CTR_ENCRYPT");
+ DMSG("AES_CTR_ENCRYPT");
+
+
             // Xilinx requires 96 bit IV and 256 bit key
             if(keySizeInBits == 256) {
+            uint8_t k[32], iv_b[64], tag[16];
+            uint8_t t[16] = { 0 };
+            uint8_t aad[32] = { 0 };
+	        uint8_t p[128], c[64];
+	        uint32_t k_len, p_len, aad_len, iv_len, c_len, t_len;
+            k_len = 32;
+            iv_len = 12;
+            p_len = dSize;
+            c_len = p_len;
+            t_len = 16;
+            memcpy(k, key, k_len);
+            memcpy(iv_b, ivInOut->t.buffer, iv_len);
+            memcpy(p, dIn, p_len);
+
             DMSG("USING MLE TEE INTERFACE");
-            if (ivInOut->t.size != 12) {
+            /*if (ivInOut->t.size != 12) {
 	        DMSG("Changing size %x to 12", ivInOut->t.size); 
-	    }
+	    }*/
             TEE_Result ret = TEE_SUCCESS;
             TEE_OperationHandle handle2 = (TEE_OperationHandle) NULL;
-            TEE_ObjectHandle key_handle = (TEE_ObjectHandle) NULL;
-            ret = TEE_AllocateOperation (&handle2, TEE_ALG_ZYNQMP_AES_GCM, TEE_MODE_ENCRYPT, 256);
-            if (ret != TEE_SUCCESS) {
-                DMSG("Error %x", ret);
-            }
-            DMSG("1");
-            // Allocate the key    
-	        ret = TEE_AllocateTransientObject(TEE_TYPE_AES, 256, &key_handle);
-	        if (ret != TEE_SUCCESS) {
-                DMSG("Failed to allocate transient object");
-	        }
-            TEE_Attribute aes_attr;
+    TEE_ObjectHandle key_handle = (TEE_ObjectHandle) NULL;
 
-            DMSG("2");
-	        TEE_InitRefAttribute(&aes_attr, TEE_ATTR_SECRET_VALUE, key, 32);
-
-            DMSG("3");    
-            // Set key
-            ret = TEE_PopulateTransientObject(key_handle, &aes_attr, 1);
-	    if (ret != TEE_SUCCESS) {
-	      DMSG("Error TEE_PopulateTransientObject %x", ret);
-	    }
-            DMSG("4");
-
-            
-            ret = TEE_SetOperationKey(handle2, key_handle);
-            if (ret != TEE_SUCCESS) {
-	            DMSG("TEE_SetOperationKey failed %d", ret);
-            }
-            DMSG("5");
-            ret = TEE_AEInit(handle2, iv, 12, 128, 0, 0);
-            if (ret != TEE_SUCCESS) {
-                TEE_FreeOperation(handle2);
-                DMSG("Error AEInit %x", ret);
-            }
     
-            DMSG("6");
-            uint32_t outSize = dSize;
-            uint8_t tag[16] = { 0 };
-            uint32_t t_len = 16;
-            ret = TEE_AEEncryptFinal(handle2, dIn, dSize, dOut, &outSize, tag, &t_len);
+    // Allocate the operation
+    ret = TEE_AllocateOperation (&handle2, TEE_ALG_ZYNQMP_AES_GCM, TEE_MODE_ENCRYPT, 256);
+    if (ret != TEE_SUCCESS) {
+        DMSG("Error %x", ret);
+    }
+    // Allocate the key    
+	ret = TEE_AllocateTransientObject(TEE_TYPE_AES, 256, &key_handle);
+	if (ret != TEE_SUCCESS) {
+        DMSG("Failed to allocate transient object");
+	}
+    TEE_Attribute aes_attr;
+
+	TEE_InitRefAttribute(&aes_attr, TEE_ATTR_SECRET_VALUE, k, k_len);
+    
+    // Set key
+    ret = TEE_PopulateTransientObject(key_handle, &aes_attr, 1);
+    if (ret != TEE_SUCCESS) {
+      DMSG("Error");
+    }
+
+    
+	ret = TEE_SetOperationKey(handle2, key_handle);
+	if (ret != TEE_SUCCESS) {
+		DMSG("TEE_SetOperationKey failed %d", ret);
+	}
+    DMSG("5 IV len %d", iv_len);
+for(uint8_t y = 0; y < iv_len; y += 8) {
+	DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", iv_b[y], iv_b[y+1], iv_b[y+2], iv_b[y+3], iv_b[y+4], iv_b[y+5], iv_b[y+6], iv_b[y+7]);
+	}
+    
+    ret = TEE_AEInit(handle2, iv_b, iv_len, t_len * 8, 0, 0);
+    if (ret != TEE_SUCCESS) {
+        TEE_FreeOperation(handle2);
+        DMSG("Error AEInit %x", ret);
+    }
+    
+    DMSG("AES In Data");
+for(uint8_t y = 0; y < p_len; y += 8) {
+		DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", p[y], p[y+1], p[y+2], p[y+3], p[y+4], p[y+5], p[y+6], p[y+7]);
+	}
+    ret = TEE_AEEncryptFinal(handle2, p, p_len, c, &c_len, t, &t_len);
+    if (ret != TEE_SUCCESS) {
+        TEE_FreeOperation(handle2);
+        DMSG("Error AEInit %x", ret);
+    }
+
+    DMSG("AES Encrypted Buffer");
+for(uint8_t y = 0; y < p_len; y += 8) {
+		DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", c[y], c[y+1], c[y+2], c[y+3], c[y+4], c[y+5], c[y+6], c[y+7]);
+	}
+
+    memcpy(dOut, c, c_len);
+    
             } else {
                 for(; dSize > 0; dSize -= blockSize)
                 {
@@ -462,19 +494,104 @@ CryptSymmetricDecrypt(
             break;
 #if     ALG_CTR
         case ALG_CTR_VALUE:
-            for(; dSize > 0; dSize -= blockSize)
-            {
-                // Encrypt the current value of the IV(counter)
-                ENCRYPT(&keySchedule, iv, tmp);
+             DMSG("AES_CTR_DECRYPT");
 
-                //increment the counter (counter is big-endian so start at end)
-                for(i = blockSize - 1; i >= 0; i--)
-                    if((iv[i] += 1) != 0)
-                        break;
-                // XOR the encrypted counter value with input and put into output
-                pT = tmp;
-                for(i = (dSize < blockSize) ? dSize : blockSize; i > 0; i--)
-                    *dOut++ = *dIn++ ^ *pT++;
+
+            // Xilinx requires 96 bit IV and 256 bit key
+            if(keySizeInBits == 256) {
+            uint8_t k[32], iv_b[64], tag[16];
+            uint8_t t[16] = { 0 };
+            uint8_t aad[32] = { 0 };
+	        uint8_t p[128], c[64];
+	        uint32_t k_len, p_len, aad_len, iv_len, c_len, t_len;
+            k_len = 32;
+            iv_len = 12;
+            p_len = dSize;
+            c_len = p_len;
+            t_len = 16;
+            memcpy(k, key, k_len);
+            memcpy(iv_b, ivInOut->t.buffer, iv_len);
+            memcpy(p, dIn, p_len);
+
+            DMSG("USING MLE TEE INTERFACE");
+            /*if (ivInOut->t.size != 12) {
+	        DMSG("Changing size %x to 12", ivInOut->t.size); 
+	    }*/
+            TEE_Result ret = TEE_SUCCESS;
+            TEE_OperationHandle handle2 = (TEE_OperationHandle) NULL;
+            TEE_ObjectHandle key_handle = (TEE_ObjectHandle) NULL;
+
+            
+            // Allocate the operation
+            ret = TEE_AllocateOperation (&handle2, TEE_ALG_ZYNQMP_AES_GCM, TEE_MODE_ENCRYPT, 256);
+            if (ret != TEE_SUCCESS) {
+                DMSG("Error %x", ret);
+            }
+            // Allocate the key    
+	        ret = TEE_AllocateTransientObject(TEE_TYPE_AES, 256, &key_handle);
+	        if (ret != TEE_SUCCESS) {
+                DMSG("Failed to allocate transient object");
+	        }
+            TEE_Attribute aes_attr;
+
+	        TEE_InitRefAttribute(&aes_attr, TEE_ATTR_SECRET_VALUE, k, k_len);
+            
+            // Set key
+            ret = TEE_PopulateTransientObject(key_handle, &aes_attr, 1);
+            if (ret != TEE_SUCCESS) {
+              DMSG("Error");
+            }
+            
+
+            
+	        ret = TEE_SetOperationKey(handle2, key_handle);
+	        if (ret != TEE_SUCCESS) {
+		        DMSG("TEE_SetOperationKey failed %d", ret);
+	        }
+            DMSG("5 IV len %d", iv_len);
+        for(uint8_t y = 0; y < iv_len; y += 8) {
+	        DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", iv_b[y], iv_b[y+1], iv_b[y+2], iv_b[y+3], iv_b[y+4], iv_b[y+5], iv_b[y+6], iv_b[y+7]);
+	        }
+            
+            ret = TEE_AEInit(handle2, iv_b, iv_len, t_len * 8, 0, 0);
+            if (ret != TEE_SUCCESS) {
+                TEE_FreeOperation(handle2);
+                DMSG("Error AEInit %x", ret);
+            }
+            
+
+            DMSG("AES In Data");
+        for(uint8_t y = 0; y < p_len; y += 8) {
+		        DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", p[y], p[y+1], p[y+2], p[y+3], p[y+4], p[y+5], p[y+6], p[y+7]);
+	        }
+            ret = TEE_AEEncryptFinal(handle2, p, p_len, c, &c_len, t, &t_len);
+            if (ret != TEE_SUCCESS) {
+                TEE_FreeOperation(handle2);
+                DMSG("Error AEInit %x", ret);
+            }
+
+            DMSG("AES Encrypted Buffer");
+        for(uint8_t y = 0; y < p_len; y += 8) {
+		        DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", c[y], c[y+1], c[y+2], c[y+3], c[y+4], c[y+5], c[y+6], c[y+7]);
+	        }
+
+            memcpy(dOut, c, c_len);
+    
+            } else {
+                for(; dSize > 0; dSize -= blockSize)
+                {
+                    // Encrypt the current value of the IV(counter)
+                    ENCRYPT(&keySchedule, iv, tmp);
+
+                    //increment the counter (counter is big-endian so start at end)
+                    for(i = blockSize - 1; i >= 0; i--)
+                        if((iv[i] += 1) != 0)
+                            break;
+                    // XOR the encrypted counter value with input and put into output
+                    pT = tmp;
+                    for(i = (dSize < blockSize) ? dSize : blockSize; i > 0; i--)
+                        *dOut++ = *dIn++ ^ *pT++;
+                }
             }
             break;
 #endif

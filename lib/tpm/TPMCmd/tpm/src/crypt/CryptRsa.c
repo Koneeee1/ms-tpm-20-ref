@@ -42,7 +42,8 @@
 // Need this define to get the 'private' defines for this function
 #define CRYPT_RSA_C
 #include "Tpm.h"
-
+#include <tee_internal_api.h>
+#include <tee_internal_api_extensions.h>
 #if     ALG_RSA
 
 //**  Obligatory Initialization Functions
@@ -452,6 +453,7 @@ RSAES_PKCS1v1_5Encode(
     RAND_STATE  *rand
     )
 {
+    DMSG("RSAES_PKCS1v1_5Encode"); 
     UINT32      ps = padded->size - message->size - 3;
 //
     if(message->size > padded->size - 11)
@@ -741,7 +743,7 @@ RSASSA_Encode(
     // Make sure that this combination will fit in the provided space
     if(fillSize < 8)
         ERROR_RETURN(TPM_RC_SIZE);
-
+    DMSG("This is where we do RSA");
     // Start filling
     *eOut++ = 0; // initial byte of zero
     *eOut++ = 1; // byte of 0x01
