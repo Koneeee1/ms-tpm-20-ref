@@ -45,7 +45,7 @@
 #include <tee_internal_api.h>
 #include <tee_internal_api_extensions.h>
 #if     ALG_RSA
-
+#define SIZE_OF_VEC(vec) (sizeof(vec) - 1)
 //**  Obligatory Initialization Functions
 
 //*** CryptRsaInit()
@@ -453,7 +453,7 @@ RSAES_PKCS1v1_5Encode(
     RAND_STATE  *rand
     )
 {
-    DMSG("RSAES_PKCS1v1_5Encode"); 
+    DMSG("RSAES_PKCS1v1_5Encode Padding"); 
     UINT32      ps = padded->size - message->size - 3;
 //
     if(message->size > padded->size - 11)
@@ -878,6 +878,7 @@ CryptRsaLoadPrivateExponent(
     OBJECT          *rsaKey        // IN: the RSA key object
     )
 {
+    
     BN_RSA_INITIALIZED(bnN, &rsaKey->publicArea.unique.rsa);
     BN_PRIME_INITIALIZED(bnP, &rsaKey->sensitive.sensitive.rsa);
     BN_RSA(bnQ);
@@ -953,7 +954,7 @@ CryptRsaEncrypt(
     // All encryption schemes return the same size of data
     cOut->t.size = key->publicArea.unique.rsa.t.size;
     TEST(scheme->scheme);
-
+    uint8_t useHACrypto = 1;
     switch(scheme->scheme)
     {
         case ALG_NULL_VALUE:  // 'raw' encryption
@@ -977,7 +978,7 @@ CryptRsaEncrypt(
         }
         break;
         case ALG_RSAES_VALUE:
-            retVal = RSAES_PKCS1v1_5Encode(&cOut->b, dIn, rand);
+            retVal = useHACrypto ? TPM_RC_SUCCESS : RSAES_PKCS1v1_5Encode(&cOut->b, dIn, rand);
             break;
         case ALG_OAEP_VALUE:
             retVal = OaepEncode(&cOut->b, scheme->details.oaep.hashAlg, label, dIn,
@@ -989,9 +990,103 @@ CryptRsaEncrypt(
     }
     // All the schemes that do padding will come here for the encryption step
     // Check that the Encoding worked
-    if(retVal == TPM_RC_SUCCESS)
+    if(retVal == TPM_RC_SUCCESS) {
         // Padding OK so do the encryption
-        retVal = RSAEP(&cOut->b, key);
+        if((!useHACrypto) || (scheme->scheme != ALG_RSAES_VALUE)) {
+            retVal = RSAEP(&cOut->b, key);
+        } else {
+            TEE_Result ret = TEE_SUCCESS; // return code        
+            TEE_ObjectHandle tee_key = (TEE_ObjectHandle) NULL;
+            TEE_Attribute rsa_attrs[3];
+            void *to_encrypt = NULL;
+            uint32_t cipher_len = key->publicArea.unique.rsa.t.size;
+            void *cipher = NULL;
+            TEE_ObjectInfo info;
+            TEE_OperationHandle handle = (TEE_OperationHandle) NULL;
+            uint16_t in_len = (uint16_t)dIn->size;
+
+
+            uint8_t public_key[3] = {0x01, 0x00, 0x01};
+
+            
+            // modulus
+            rsa_attrs[0].attributeID = TEE_ATTR_RSA_MODULUS;
+            rsa_attrs[0].content.ref.buffer = (uint8_t *)key->publicArea.unique.rsa.t.buffer;
+            rsa_attrs[0].content.ref.length = (uint16_t)key->publicArea.unique.rsa.t.size;
+            // Public key
+            rsa_attrs[1].attributeID = TEE_ATTR_RSA_PUBLIC_EXPONENT;
+            rsa_attrs[1].content.ref.buffer = public_key;
+            rsa_attrs[1].content.ref.length = 3;
+            // Private key
+            rsa_attrs[2].attributeID = TEE_ATTR_RSA_PRIVATE_EXPONENT;
+            rsa_attrs[2].content.ref.buffer = (uint8_t *)key->sensitive.sensitive.rsa.t.buffer;
+            rsa_attrs[2].content.ref.length = (uint16_t)key->sensitive.sensitive.rsa.t.size;
+            
+            DMSG("Setting key size to %d and message size to %d", (key->publicArea.unique.rsa.t.size * 8), in_len);
+            // create a transient object
+            ret = TEE_AllocateTransientObject(TEE_TYPE_RSA_KEYPAIR, (key->publicArea.unique.rsa.t.size * 8), &tee_key);
+            if (ret != TEE_SUCCESS) {
+              DMSG("Error");
+            }
+
+            // populate the object with your keys
+            ret = TEE_PopulateTransientObject(tee_key, (TEE_Attribute *)&rsa_attrs, 3);
+            if (ret != TEE_SUCCESS) {
+              DMSG("Error");
+            }
+
+            // create your structures to de / encrypt
+            to_encrypt = TEE_Malloc (in_len, 0);
+            cipher = TEE_Malloc (cipher_len, 0);
+            if (!to_encrypt || !cipher) {
+              DMSG("Error");
+            }
+            
+             DMSG("RSA Test Buffer");
+            for(uint16_t y = 0; y < in_len; y += 8) {
+		        DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", ((uint8_t *)dIn->buffer)[y], ((uint8_t *)dIn->buffer)[y+1], ((uint8_t *)dIn->buffer)[y+2], ((uint8_t *)dIn->buffer)[y+3], ((uint8_t *)dIn->buffer)[y+4], ((uint8_t *)dIn->buffer)[y+5], ((uint8_t *)dIn->buffer)[y+6], ((uint8_t *)dIn->buffer)[y+7]);
+	        }
+
+            TEE_MemMove(to_encrypt, dIn->buffer, in_len);
+
+            // setup the info structure about the key
+            TEE_GetObjectInfo(tee_key, &info);
+
+            // Allocate the operation
+            ret = TEE_AllocateOperation (&handle, TEE_ALG_RSAES_PKCS1_V1_5, TEE_MODE_ENCRYPT, info.maxObjectSize);
+            if (ret != TEE_SUCCESS) {
+              DMSG("Error");
+            }
+
+            // set the key
+            ret = TEE_SetOperationKey(handle, tee_key);
+            if (ret != TEE_SUCCESS) {
+              TEE_FreeOperation(handle);
+              DMSG("Error");
+            }
+
+            // encrypt
+            ret = TEE_AsymmetricEncrypt (handle, (TEE_Attribute *)NULL, 0, to_encrypt, in_len, cipher, &cipher_len);
+            if (ret != TEE_SUCCESS) {
+              TEE_FreeOperation(handle);
+              DMSG("Error");
+            }
+
+            DMSG("RSA Encrypted Buffer has %d Bytes", cipher_len);
+            for(uint16_t y = 0; y < cipher_len; y += 8) {
+		        DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", ((uint8_t *)cipher)[y], ((uint8_t *)cipher)[y+1], ((uint8_t *)cipher)[y+2], ((uint8_t *)cipher)[y+3], ((uint8_t *)cipher)[y+4], ((uint8_t *)cipher)[y+5], ((uint8_t *)cipher)[y+6], ((uint8_t *)cipher)[y+7]);
+	        }
+            TEE_MemMove(cOut->b.buffer, cipher, cipher_len);
+            cOut->b.size = cipher_len;
+            // clean up
+            TEE_FreeOperation(handle);
+            TEE_FreeTransientObject(tee_key);
+            TEE_Free(cipher);
+            TEE_Free(to_encrypt);
+            DMSG("end of rsa encrypt");
+        
+        }
+    }
 Exit:
     return retVal;
 }
@@ -1019,6 +1114,7 @@ CryptRsaDecrypt(
 {
     TPM_RC                 retVal;
 
+    uint8_t useHACrypto = 1;
     // Make sure that the necessary parameters are provided
     pAssert(cIn != NULL && dOut != NULL && key != NULL);
 
@@ -1030,27 +1126,122 @@ CryptRsaDecrypt(
 
     // For others that do padding, do the decryption in place and then
     // go handle the decoding.
-    retVal = RSADP(cIn, key);
-    if(retVal == TPM_RC_SUCCESS)
-    {
-        // Remove padding
-        switch(scheme->scheme)
+    if((!useHACrypto) || (scheme->scheme != ALG_RSAES_VALUE)) {  
+        retVal = RSADP(cIn, key);
+        if(retVal == TPM_RC_SUCCESS)
         {
-            case ALG_NULL_VALUE:
-                if(dOut->size < cIn->size)
-                    return TPM_RC_VALUE;
-                MemoryCopy2B(dOut, cIn, dOut->size);
-                break;
-            case ALG_RSAES_VALUE:
-                retVal = RSAES_Decode(dOut, cIn);
-                break;
-            case ALG_OAEP_VALUE:
-                retVal = OaepDecode(dOut, scheme->details.oaep.hashAlg, label, cIn);
-                break;
-            default:
-                retVal = TPM_RC_SCHEME;
-                break;
+            // Remove padding
+            switch(scheme->scheme)
+            {
+                case ALG_NULL_VALUE:
+                    if(dOut->size < cIn->size)
+                        return TPM_RC_VALUE;
+                    MemoryCopy2B(dOut, cIn, dOut->size);
+                    break;
+                case ALG_RSAES_VALUE:              
+                    retVal = RSAES_Decode(dOut, cIn);
+                    break;
+                case ALG_OAEP_VALUE:
+                    retVal = OaepDecode(dOut, scheme->details.oaep.hashAlg, label, cIn);
+                    break;
+                default:
+                    retVal = TPM_RC_SCHEME;
+                    break;
+            }
         }
+    } else {
+        TEE_Result ret = TEE_SUCCESS; // return code        
+        TEE_ObjectHandle tee_key = (TEE_ObjectHandle) NULL;
+        TEE_Attribute rsa_attrs[3];
+        void *decrypted = NULL;
+        void *cipher = NULL;
+        TEE_ObjectInfo info;
+        TEE_OperationHandle handle = (TEE_OperationHandle) NULL;
+        uint16_t in_len = (uint16_t)cIn->size;
+
+        // https://www.cryptsoft.com/pkcs11doc/v230/group__SEC__11__1__6__PKCS____1__V1__5__RSA.html
+        // According to this it should probably be k-11
+        uint32_t cipher_len = key->publicArea.unique.rsa.t.size;
+
+
+        uint8_t public_key[3] = {0x01, 0x00, 0x01};
+
+        
+        // modulus
+        rsa_attrs[0].attributeID = TEE_ATTR_RSA_MODULUS;
+        rsa_attrs[0].content.ref.buffer = (uint8_t *)key->publicArea.unique.rsa.t.buffer;
+        rsa_attrs[0].content.ref.length = (uint16_t)key->publicArea.unique.rsa.t.size;
+        // Public key
+        rsa_attrs[1].attributeID = TEE_ATTR_RSA_PUBLIC_EXPONENT;
+        rsa_attrs[1].content.ref.buffer = public_key;
+        rsa_attrs[1].content.ref.length = 3;
+        // Private key
+        rsa_attrs[2].attributeID = TEE_ATTR_RSA_PRIVATE_EXPONENT;
+        rsa_attrs[2].content.ref.buffer = (uint8_t *)key->sensitive.sensitive.rsa.t.buffer;
+        rsa_attrs[2].content.ref.length = (uint16_t)key->sensitive.sensitive.rsa.t.size;
+        
+        DMSG("Setting key size to %d and message size to %d", (key->publicArea.unique.rsa.t.size * 8), in_len);
+        // create a transient object
+        ret = TEE_AllocateTransientObject(TEE_TYPE_RSA_KEYPAIR, (key->publicArea.unique.rsa.t.size * 8), &tee_key);
+        if (ret != TEE_SUCCESS) {
+          DMSG("Error");
+        }
+
+        // populate the object with your keys
+        ret = TEE_PopulateTransientObject(tee_key, (TEE_Attribute *)&rsa_attrs, 3);
+        if (ret != TEE_SUCCESS) {
+          DMSG("Error");
+        }
+
+        // create your structures to de / encrypt
+        cipher = TEE_Malloc (in_len, 0);
+        decrypted = TEE_Malloc (cipher_len, 0);
+        if (!decrypted || !cipher) {
+          DMSG("Error");
+        }
+        
+         DMSG("RSA Test Buffer");
+        for(uint16_t y = 0; y < in_len; y += 8) {
+            DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", ((uint8_t *)cIn->buffer)[y], ((uint8_t *)cIn->buffer)[y+1], ((uint8_t *)cIn->buffer)[y+2], ((uint8_t *)cIn->buffer)[y+3], ((uint8_t *)cIn->buffer)[y+4], ((uint8_t *)cIn->buffer)[y+5], ((uint8_t *)cIn->buffer)[y+6], ((uint8_t *)cIn->buffer)[y+7]);
+        }
+
+        TEE_MemMove(cipher, cIn->buffer, in_len);
+
+        // setup the info structure about the key
+        TEE_GetObjectInfo(tee_key, &info);
+
+        // Allocate the operation
+        ret = TEE_AllocateOperation (&handle, TEE_ALG_RSAES_PKCS1_V1_5, TEE_MODE_DECRYPT, info.maxObjectSize);
+        if (ret != TEE_SUCCESS) {
+          DMSG("Error");
+        }
+
+        // set the key
+        ret = TEE_SetOperationKey(handle, tee_key);
+        if (ret != TEE_SUCCESS) {
+          TEE_FreeOperation(handle);
+          DMSG("Error");
+        }
+
+        // encrypt
+        ret = TEE_AsymmetricDecrypt (handle, (TEE_Attribute *)NULL, 0, cipher, cipher_len, decrypted, &in_len);
+        if (ret != TEE_SUCCESS) {
+          TEE_FreeOperation(handle);
+          DMSG("Error");
+        }
+
+        DMSG("RSA Encrypted Buffer has %d Bytes", cipher_len);
+        for(uint16_t y = 0; y < cipher_len; y += 8) {
+            DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", ((uint8_t *)decrypted)[y], ((uint8_t *)decrypted)[y+1], ((uint8_t *)decrypted)[y+2], ((uint8_t *)decrypted)[y+3], ((uint8_t *)decrypted)[y+4], ((uint8_t *)decrypted)[y+5], ((uint8_t *)decrypted)[y+6], ((uint8_t *)decrypted)[y+7]);
+        }
+        TEE_MemMove(dOut->buffer, decrypted, cipher_len);
+        dOut->size = cipher_len;
+        // clean up
+        TEE_FreeOperation(handle);
+        TEE_FreeTransientObject(tee_key);
+        TEE_Free(decrypted);
+        retVal = TPM_RC_SUCCESS;
+        DMSG("end of rsa encrypt");
     }
 Exit:
     return retVal;
