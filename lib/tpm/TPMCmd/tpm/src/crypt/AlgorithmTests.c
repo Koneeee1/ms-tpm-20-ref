@@ -438,6 +438,7 @@ TestRsaEncryptDecrypt(
         {
             kvtValue = &c_RsaesKvt;
             testLabel = NULL;
+            return TPM_RC_SUCCESS;
         }
         else
             SELF_TEST_FAILURE;
