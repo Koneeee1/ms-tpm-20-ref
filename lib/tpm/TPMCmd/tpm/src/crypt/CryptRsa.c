@@ -1161,7 +1161,7 @@ CryptRsaDecrypt(
 
         // https://www.cryptsoft.com/pkcs11doc/v230/group__SEC__11__1__6__PKCS____1__V1__5__RSA.html
         // According to this it should probably be k-11
-        uint32_t cipher_len = key->publicArea.unique.rsa.t.size;
+        uint32_t cipher_len = 2*key->publicArea.unique.rsa.t.size;
 
 
         uint8_t public_key[3] = {0x01, 0x00, 0x01};
@@ -1180,7 +1180,7 @@ CryptRsaDecrypt(
         rsa_attrs[2].content.ref.buffer = (uint8_t *)key->sensitive.sensitive.rsa.t.buffer;
         rsa_attrs[2].content.ref.length = (uint16_t)key->sensitive.sensitive.rsa.t.size;
         
-        DMSG("Setting key size to %d and message size to %d", (key->publicArea.unique.rsa.t.size * 8), in_len);
+        DMSG("Setting key size to %d and message size to %d and output len to %d", (key->publicArea.unique.rsa.t.size * 8), in_len, cipher_len);
         // create a transient object
         ret = TEE_AllocateTransientObject(TEE_TYPE_RSA_KEYPAIR, (key->publicArea.unique.rsa.t.size * 8), &tee_key);
         if (ret != TEE_SUCCESS) {
@@ -1195,7 +1195,7 @@ CryptRsaDecrypt(
 
         // create your structures to de / encrypt
         cipher = TEE_Malloc (in_len, 0);
-        decrypted = TEE_Malloc (cipher_len, 0);
+        decrypted = TEE_Malloc (2*cipher_len, 0);
         if (!decrypted || !cipher) {
           DMSG("Error");
         }
@@ -1205,7 +1205,7 @@ CryptRsaDecrypt(
             DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", ((uint8_t *)cIn->buffer)[y], ((uint8_t *)cIn->buffer)[y+1], ((uint8_t *)cIn->buffer)[y+2], ((uint8_t *)cIn->buffer)[y+3], ((uint8_t *)cIn->buffer)[y+4], ((uint8_t *)cIn->buffer)[y+5], ((uint8_t *)cIn->buffer)[y+6], ((uint8_t *)cIn->buffer)[y+7]);
         }
 
-        TEE_MemMove(cipher, cIn->buffer, in_len);
+        TEE_MemMove(cipher, (uint8_t *)(cIn->buffer), in_len);
 
         // setup the info structure about the key
         TEE_GetObjectInfo(tee_key, &info);
@@ -1222,9 +1222,9 @@ CryptRsaDecrypt(
           TEE_FreeOperation(handle);
           DMSG("Error");
         }
-
+        DMSG("now we decrypt");
         // encrypt
-        ret = TEE_AsymmetricDecrypt (handle, (TEE_Attribute *)NULL, 0, cipher, cipher_len, decrypted, &in_len);
+        ret = TEE_AsymmetricDecrypt (handle, (TEE_Attribute *)NULL, 0, cipher, in_len, decrypted, &cipher_len);
         if (ret != TEE_SUCCESS) {
           TEE_FreeOperation(handle);
           DMSG("Error");
