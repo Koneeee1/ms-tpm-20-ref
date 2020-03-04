@@ -263,7 +263,7 @@ RSADP(
     BnTo2B(bnM, inOut, inOut->size);
     return TPM_RC_SUCCESS;
 }
-
+/*
 static TPM_RC
 RSAInitializePrivate(
     TPM2B           *inOut,        // IN/OUT: the value to encrypt
@@ -282,7 +282,7 @@ RSAInitializePrivate(
     if(!key->attributes.privateExp)
         CryptRsaLoadPrivateExponent(key);
     return TPM_RC_SUCCESS;
-}
+}*/
 
 //*** OaepEncode()
 // This function performs OAEP padding. The size of the buffer to receive the
@@ -766,6 +766,7 @@ RSASSA_Encode(
     // Make sure that this combination will fit in the provided space
     if(fillSize < 8)
         ERROR_RETURN(TPM_RC_SIZE);
+    DMSG("This is where we do RSA");
     // Start filling
     *eOut++ = 0; // initial byte of zero
     *eOut++ = 1; // byte of 0x01
@@ -1173,7 +1174,7 @@ CryptRsaDecrypt(
             }
         }
     } else {
-        RSAInitializePrivate(cIn, key);
+        CryptRsaLoadPrivateExponent(key);
         // Maximum supported size for xilsecure hardware is 512 * 8 = 4096 Bits
         uint8_t *privateExponentBuffer = TEE_Malloc(512, 0);
         uint16_t new_size = 512;
@@ -1265,7 +1266,7 @@ CryptRsaDecrypt(
         TEE_Free(decrypted);
         TEE_Free(cipher);
         retVal = TPM_RC_SUCCESS;
-        DMSG("end of rsa encrypt");
+        DMSG("end of rsa decrypt");
     }
 Exit:
     return retVal;
@@ -1301,9 +1302,8 @@ CryptRsaSign(
 
     TEST(sigOut->sigAlg);
 
-    uint8_t useHACrypto = 0;
-
-    if(!useHACrypto) {
+    uint8_t useHACrypto = 1;
+    if(!useHACrypto) {    
         switch(sigOut->sigAlg)
         {
             case ALG_NULL_VALUE:
@@ -1326,10 +1326,122 @@ CryptRsaSign(
             retVal = RSADP(&sigOut->signature.rsapss.sig.b, key);
         }
     } else {
-        retVal = TPM_RC_SUCCESS;
+        CryptRsaLoadPrivateExponent(key);
+        // Maximum supported size for xilsecure hardware is 512 * 8 = 4096 Bits
+        TEE_Result ret = TEE_SUCCESS; // return code 
+        uint8_t *privateExponentBuffer = TEE_Malloc(512, 0);
+        uint16_t new_size = 512;
+        privateExponent_t *pExp = &key->privateExponent;
+        BnToBytes((bigNum)&pExp->D, privateExponentBuffer, &new_size);
+        ret = TEE_SUCCESS; // return code        
+        TEE_ObjectHandle tee_key = (TEE_ObjectHandle) NULL;
+        TEE_ObjectInfo info;
+        void *signature = NULL;
+        uint32_t signature_len = (uint32_t)key->publicArea.unique.rsa.t.size;
+        void *digest = NULL;
+        TEE_OperationHandle handle = (TEE_OperationHandle) NULL;
+        TEE_Attribute rsa_attrs[3];
 
+        DMSG("Our hash size is %d Bytes", hIn->b.size);
+        uint16_t digest_len = hIn->b.size;
+        
+
+        uint8_t public_key[3] = {0x01, 0x00, 0x01};
+        // modulus
+        rsa_attrs[0].attributeID = TEE_ATTR_RSA_MODULUS;
+        rsa_attrs[0].content.ref.buffer = (uint8_t *)key->publicArea.unique.rsa.t.buffer;
+        rsa_attrs[0].content.ref.length = (uint16_t)key->publicArea.unique.rsa.t.size;
+        // Public key
+        rsa_attrs[1].attributeID = TEE_ATTR_RSA_PUBLIC_EXPONENT;
+        rsa_attrs[1].content.ref.buffer = public_key;
+        rsa_attrs[1].content.ref.length = 3;
+        // Private key
+        rsa_attrs[2].attributeID = TEE_ATTR_RSA_PRIVATE_EXPONENT;
+        rsa_attrs[2].content.ref.buffer = privateExponentBuffer;
+        rsa_attrs[2].content.ref.length = new_size;
+
+        DMSG("Setting key size to %d and digest len to %d and output len to %d", new_size*8, digest_len, signature_len);
+        // create a transient object
+        ret = TEE_AllocateTransientObject(TEE_TYPE_RSA_KEYPAIR, new_size*8, &tee_key);
+        if (ret != TEE_SUCCESS) {
+          DMSG("Error");
+        }
+
+        // populate the object with your keys
+        ret = TEE_PopulateTransientObject(tee_key, (TEE_Attribute *)&rsa_attrs, 3);
+        if (ret != TEE_SUCCESS) {
+          DMSG("Error");
+        }
+
+        // create your structures to de / encrypt
+        digest = TEE_Malloc (digest_len, 0);
+        signature = TEE_Malloc (signature_len, 0);
+        if (!signature || !digest) {
+          DMSG("Error");
+        }
+
+        TEE_MemMove(digest, (uint8_t *)(hIn->b.buffer), digest_len);
+
+
+        TEE_GetObjectInfo(tee_key, &info);
+
+        // Allocate the operation
+    
+        switch(sigOut->sigAlg)
+        {
+            case ALG_NULL_VALUE:
+                sigOut->signature.rsapss.sig.t.size = 0;
+                return TPM_RC_SUCCESS;
+            case ALG_RSAPSS_VALUE:
+                    ret = TEE_AllocateOperation (&handle, TEE_ALG_RSASSA_PKCS1_PSS_MGF1_SHA512, TEE_MODE_SIGN, info.maxObjectSize);
+                    if (ret != TEE_SUCCESS) {
+                      DMSG("Error");
+                    }
+                break;
+            case ALG_RSASSA_VALUE:
+                    ret = TEE_AllocateOperation (&handle, TEE_ALG_RSASSA_PKCS1_V1_5_SHA512, TEE_MODE_SIGN, info.maxObjectSize);
+                    if (ret != TEE_SUCCESS) {
+                      DMSG("Error");
+                    }
+                break;
+        }
+
+        // set the key
+        ret = TEE_SetOperationKey(handle, tee_key);
+        if (ret != TEE_SUCCESS) {
+          TEE_FreeOperation(handle);
+          DMSG("Error");
+        }
+        DMSG("now we sign");
+        // encrypt
+        ret = TEE_AsymmetricSignDigest(handle, (TEE_Attribute *)NULL, 0, digest, digest_len, signature, &signature_len);
+        if (ret != TEE_SUCCESS) {
+          TEE_FreeOperation(handle);
+          DMSG("Error");
+        }
+
+            DMSG("RSA signature Buffer has %d Bytes", signature_len);
+    for(uint16_t y = 0; y < signature_len; y += 8) {
+        DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", ((uint8_t *)signature)[y], ((uint8_t *)signature)[y+1], ((uint8_t *)signature)[y+2], ((uint8_t *)signature)[y+3], ((uint8_t *)signature)[y+4], ((uint8_t *)signature)[y+5], ((uint8_t *)signature)[y+6], ((uint8_t *)signature)[y+7]);
+    }
+        if(sigOut->sigAlg == ALG_RSASSA_VALUE) {
+            TEE_MemMove(sigOut->signature.rsassa.sig.b.buffer, signature, signature_len);
+            sigOut->signature.rsassa.sig.b.size = signature_len;
+        } else {
+            TEE_MemMove(sigOut->signature.rsapss.sig.b.buffer, signature, signature_len);
+            sigOut->signature.rsapss.sig.b.size = signature_len;
+        }
+        // clean up
+        TEE_Free(privateExponentBuffer);
+        TEE_FreeOperation(handle);
+        TEE_FreeTransientObject(tee_key);
+        TEE_Free(signature);
+        TEE_Free(digest);
+        retVal = TPM_RC_SUCCESS;
+        DMSG("end of rsa sign");
 
     }
+
     return retVal;
 }
 
@@ -1367,24 +1479,147 @@ CryptRsaValidateSignature(
         ERROR_RETURN(TPM_RC_SIGNATURE);
 
     TEST(sig->sigAlg);
+    uint8_t useHACrypto = 1;
+    if(!useHACrypto) {
+        // Decrypt the block
+        retVal = RSAEP(&sig->signature.rsassa.sig.b, key);
+        if(retVal == TPM_RC_SUCCESS)
+        {
+            switch(sig->sigAlg)
+            {
+                case ALG_RSAPSS_VALUE:
+                    retVal = PssDecode(sig->signature.any.hashAlg, &digest->b,
+                                       &sig->signature.rsassa.sig.b);
+                    break;
+                case ALG_RSASSA_VALUE:
+                    retVal = RSASSA_Decode(sig->signature.any.hashAlg, &digest->b,
+                                           &sig->signature.rsassa.sig.b);
+                    break;
+                default:
+                    return TPM_RC_SCHEME;
+            }
+        }
+    } else {
+        // Maximum supported size for xilsecure hardware is 512 * 8 = 4096 Bits
+        TEE_Result ret = TEE_SUCCESS; // return code 
+        // To conform with TEE Specification we have to load the private exponent, even though we don't need it
+        CryptRsaLoadPrivateExponent(key);
+        uint8_t *privateExponentBuffer = TEE_Malloc(512, 0);
+        uint16_t new_size = 512;
+        privateExponent_t *pExp = &key->privateExponent;
+        BnToBytes((bigNum)&pExp->D, privateExponentBuffer, &new_size);
+        TEE_ObjectHandle tee_key = (TEE_ObjectHandle) NULL;
+        TEE_ObjectInfo info;
+        void *signature = NULL;
+        uint32_t signature_len = (uint32_t)key->publicArea.unique.rsa.t.size;
+        void *local_digest = NULL;
+        TEE_OperationHandle handle = (TEE_OperationHandle) NULL;
+        TEE_Attribute rsa_attrs[3];
 
-    // Decrypt the block
-    retVal = RSAEP(&sig->signature.rsassa.sig.b, key);
-    if(retVal == TPM_RC_SUCCESS)
-    {
+        DMSG("Our hash size is %d Bytes", digest->b.size);
+        uint16_t local_digest_len = digest->b.size;
+        
+
+        uint8_t public_key[3] = {0x01, 0x00, 0x01};
+        // modulus
+        rsa_attrs[0].attributeID = TEE_ATTR_RSA_MODULUS;
+        rsa_attrs[0].content.ref.buffer = (uint8_t *)key->publicArea.unique.rsa.t.buffer;
+        rsa_attrs[0].content.ref.length = (uint16_t)key->publicArea.unique.rsa.t.size;
+        // Public key
+        rsa_attrs[1].attributeID = TEE_ATTR_RSA_PUBLIC_EXPONENT;
+        rsa_attrs[1].content.ref.buffer = public_key;
+        rsa_attrs[1].content.ref.length = 3;
+        // Private key
+        rsa_attrs[2].attributeID = TEE_ATTR_RSA_PRIVATE_EXPONENT;
+        rsa_attrs[2].content.ref.buffer = privateExponentBuffer;
+        rsa_attrs[2].content.ref.length = new_size;
+
+        DMSG("Setting key size to %d and local_digest len to %d and output len to %d", new_size*8, local_digest_len, signature_len);
+        // create a transient object
+        ret = TEE_AllocateTransientObject(TEE_TYPE_RSA_KEYPAIR, new_size*8, &tee_key);
+        if (ret != TEE_SUCCESS) {
+          DMSG("Error");
+        }
+
+        // populate the object with your keys
+        ret = TEE_PopulateTransientObject(tee_key, (TEE_Attribute *)&rsa_attrs, 3);
+        if (ret != TEE_SUCCESS) {
+          DMSG("Error");
+        }
+
+        // create your structures to de / encrypt
+        local_digest = TEE_Malloc (local_digest_len, 0);
+        signature = TEE_Malloc (signature_len, 0);
+        if (!signature || !local_digest) {
+          DMSG("Error");
+        }
+
+        if(sig->sigAlg == ALG_RSASSA_VALUE) {
+            TEE_MemMove(signature, sig->signature.rsassa.sig.b.buffer, signature_len);
+        } else {
+            TEE_MemMove(signature, sig->signature.rsapss.sig.b.buffer, signature_len);
+        }
+        TEE_MemMove(local_digest, (uint8_t *)(digest->b.buffer), local_digest_len);
+
+
+        TEE_GetObjectInfo(tee_key, &info);
+
+        // Allocate the operation
+    
         switch(sig->sigAlg)
         {
+            case ALG_NULL_VALUE:
+                sig->signature.rsapss.sig.t.size = 0;
+                return TPM_RC_SUCCESS;
             case ALG_RSAPSS_VALUE:
-                retVal = PssDecode(sig->signature.any.hashAlg, &digest->b,
-                                   &sig->signature.rsassa.sig.b);
+                    ret = TEE_AllocateOperation (&handle, TEE_ALG_RSASSA_PKCS1_PSS_MGF1_SHA512, TEE_MODE_VERIFY, info.maxObjectSize);
+                    if (ret != TEE_SUCCESS) {
+                      DMSG("Error");
+                    }
                 break;
             case ALG_RSASSA_VALUE:
-                retVal = RSASSA_Decode(sig->signature.any.hashAlg, &digest->b,
-                                       &sig->signature.rsassa.sig.b);
+                    ret = TEE_AllocateOperation (&handle, TEE_ALG_RSASSA_PKCS1_V1_5_SHA512, TEE_MODE_VERIFY, info.maxObjectSize);
+                    if (ret != TEE_SUCCESS) {
+                      DMSG("Error");
+                    }
                 break;
-            default:
-                return TPM_RC_SCHEME;
         }
+
+        // set the key
+        ret = TEE_SetOperationKey(handle, tee_key);
+        if (ret != TEE_SUCCESS) {
+          TEE_FreeOperation(handle);
+          DMSG("Error");
+        }
+        DMSG("now we verify with alg %x", sig->sigAlg);
+        DMSG("RSA signature Buffer has %d Bytes", signature_len);
+    for(uint16_t y = 0; y < signature_len; y += 8) {
+        DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", ((uint8_t *)signature)[y], ((uint8_t *)signature)[y+1], ((uint8_t *)signature)[y+2], ((uint8_t *)signature)[y+3], ((uint8_t *)signature)[y+4], ((uint8_t *)signature)[y+5], ((uint8_t *)signature)[y+6], ((uint8_t *)signature)[y+7]);
+    }
+        DMSG("RSA local digest Buffer has %d Bytes", local_digest_len);
+    for(uint16_t y = 0; y < local_digest_len; y += 8) {
+        DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", ((uint8_t *)local_digest)[y], ((uint8_t *)local_digest)[y+1], ((uint8_t *)local_digest)[y+2], ((uint8_t *)local_digest)[y+3], ((uint8_t *)local_digest)[y+4], ((uint8_t *)local_digest)[y+5], ((uint8_t *)local_digest)[y+6], ((uint8_t *)local_digest)[y+7]);
+    }
+
+
+
+        // encrypt
+        ret = TEE_AsymmetricVerifyDigest(handle, (TEE_Attribute *)NULL, 0, local_digest, local_digest_len, signature, signature_len);
+        if (ret != TEE_SUCCESS) {
+          TEE_FreeOperation(handle);
+          retVal = TPM_RC_SIGNATURE;
+          DMSG("Can't verify signature %x", ret);
+        } else {
+          DMSG("Signature verified");
+          retVal = TPM_RC_SUCCESS;
+        }
+        // clean up
+        TEE_FreeOperation(handle);
+        TEE_FreeTransientObject(tee_key);
+        TEE_Free(signature);
+        free(privateExponentBuffer);
+        TEE_Free(local_digest);
+        DMSG("end of rsa signature verification");
     }
 Exit:
     return (retVal != TPM_RC_SUCCESS) ? TPM_RC_SIGNATURE : TPM_RC_SUCCESS;
