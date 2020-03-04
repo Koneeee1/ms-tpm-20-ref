@@ -766,7 +766,6 @@ RSASSA_Encode(
     // Make sure that this combination will fit in the provided space
     if(fillSize < 8)
         ERROR_RETURN(TPM_RC_SIZE);
-    DMSG("This is where we do RSA");
     // Start filling
     *eOut++ = 0; // initial byte of zero
     *eOut++ = 1; // byte of 0x01
@@ -1302,26 +1301,34 @@ CryptRsaSign(
 
     TEST(sigOut->sigAlg);
 
-    switch(sigOut->sigAlg)
-    {
-        case ALG_NULL_VALUE:
-            sigOut->signature.rsapss.sig.t.size = 0;
-            return TPM_RC_SUCCESS;
-        case ALG_RSAPSS_VALUE:
-            retVal = PssEncode(&sigOut->signature.rsapss.sig.b,
-                               sigOut->signature.rsapss.hash, &hIn->b, rand);
-            break;
-        case ALG_RSASSA_VALUE:
-            retVal = RSASSA_Encode(&sigOut->signature.rsassa.sig.b,
-                                   sigOut->signature.rsassa.hash, &hIn->b);
-            break;
-        default:
-            retVal = TPM_RC_SCHEME;
-    }
-    if(retVal == TPM_RC_SUCCESS)
-    {
-        // Do the encryption using the private key
-        retVal = RSADP(&sigOut->signature.rsapss.sig.b, key);
+    uint8_t useHACrypto = 0;
+
+    if(!useHACrypto) {
+        switch(sigOut->sigAlg)
+        {
+            case ALG_NULL_VALUE:
+                sigOut->signature.rsapss.sig.t.size = 0;
+                return TPM_RC_SUCCESS;
+            case ALG_RSAPSS_VALUE:
+                retVal = PssEncode(&sigOut->signature.rsapss.sig.b,
+                                   sigOut->signature.rsapss.hash, &hIn->b, rand);
+                break;
+            case ALG_RSASSA_VALUE:
+                retVal = RSASSA_Encode(&sigOut->signature.rsassa.sig.b,
+                                       sigOut->signature.rsassa.hash, &hIn->b);
+                break;
+            default:
+                retVal = TPM_RC_SCHEME;
+        }
+        if(retVal == TPM_RC_SUCCESS)
+        {
+            // Do the encryption using the private key
+            retVal = RSADP(&sigOut->signature.rsapss.sig.b, key);
+        }
+    } else {
+        retVal = TPM_RC_SUCCESS;
+
+
     }
     return retVal;
 }

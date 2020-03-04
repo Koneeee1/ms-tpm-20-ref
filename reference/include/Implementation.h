@@ -197,7 +197,7 @@
 #define RAM_INDEX_SPACE                 512
 #define RSA_DEFAULT_PUBLIC_EXPONENT     0x00010001
 #define ENABLE_PCR_NO_INCREMENT         YES
-#define CRT_FORMAT_RSA                  YES
+#define CRT_FORMAT_RSA                  NO
 #define VENDOR_COMMAND_COUNT            0
 #define MAX_VENDOR_BUFFER_SIZE          1024
 #define TPM_MAX_DERIVATION_BITS         8192
