@@ -189,7 +189,6 @@ TestSymmetricAlgorithm(
     static BYTE                 decrypted[MAX_SYM_BLOCK_SIZE * 2];
     static TPM2B_IV             iv;
 //
-    DMSG("Testing symmetric algorithm with TPM_ALG_ID %0x", mode);
     // Get the appropriate IV
     iv.t.size = (UINT16)MakeIv(mode, test->ivSize, iv.t.buffer);
     
@@ -203,8 +202,7 @@ TestSymmetricAlgorithm(
                           mode, test->dataInOutSize, test->dataIn);
     // Check that it matches the expected value
     if(!MemoryEqual(encrypted, test->dataOut[mode - ALG_CTR_VALUE],
-                    test->dataInOutSize)) {
-        DMSG("Expected value doesnt match");    
+                    test->dataInOutSize)) { 
         SELF_TEST_FAILURE;
     }
     // Reinitialize the iv for decryption
@@ -438,7 +436,6 @@ TestRsaEncryptDecrypt(
         {
             kvtValue = &c_RsaesKvt;
             testLabel = NULL;
-            return TPM_RC_SUCCESS;
         }
         else
             SELF_TEST_FAILURE;

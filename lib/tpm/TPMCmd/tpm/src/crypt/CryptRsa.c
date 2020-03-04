@@ -42,6 +42,7 @@
 // Need this define to get the 'private' defines for this function
 #define CRYPT_RSA_C
 #include "Tpm.h"
+#include "swap.h"
 #include <tee_internal_api.h>
 #include <tee_internal_api_extensions.h>
 #if     ALG_RSA
@@ -143,6 +144,7 @@ ComputePrivateExponent(
 
 }
 
+
 //*** RsaPrivateKeyOp()
 // This function is called to do the exponentiation with the private key. Compile
 // options allow use of the simple (but slow) private exponent, or the more complex
@@ -156,6 +158,7 @@ RsaPrivateKeyOp(
     )
 {
     BOOL                 OK;
+
 #if CRT_FORMAT_RSA == NO
     (P);
     OK = BnModExp(inOut, inOut, (bigNum)&pExp->D, N);
@@ -258,6 +261,26 @@ RSADP(
     if(!RsaPrivateKeyOp(bnM, bnN, bnP, &key->privateExponent))
         FAIL(FATAL_ERROR_INTERNAL);
     BnTo2B(bnM, inOut, inOut->size);
+    return TPM_RC_SUCCESS;
+}
+
+static TPM_RC
+RSAInitializePrivate(
+    TPM2B           *inOut,        // IN/OUT: the value to encrypt
+    OBJECT          *key           // IN: the key
+    )
+{
+    BN_RSA_INITIALIZED(bnM, inOut);
+    BN_RSA_INITIALIZED(bnN, &key->publicArea.unique.rsa);
+    BN_RSA_INITIALIZED(bnP, &key->sensitive.sensitive.rsa);
+    if(BnUnsignedCmp(bnM, bnN) >= 0)
+        return TPM_RC_SIZE;
+    // private key operation requires that private exponent be loaded
+    // During self-test, this might not be the case so load it up if it hasn't 
+    // already done
+    // been done
+    if(!key->attributes.privateExp)
+        CryptRsaLoadPrivateExponent(key);
     return TPM_RC_SUCCESS;
 }
 
@@ -1138,10 +1161,11 @@ CryptRsaDecrypt(
                         return TPM_RC_VALUE;
                     MemoryCopy2B(dOut, cIn, dOut->size);
                     break;
-                case ALG_RSAES_VALUE:              
+                case ALG_RSAES_VALUE:
                     retVal = RSAES_Decode(dOut, cIn);
                     break;
                 case ALG_OAEP_VALUE:
+                    DMSG("hi OAEP");
                     retVal = OaepDecode(dOut, scheme->details.oaep.hashAlg, label, cIn);
                     break;
                 default:
@@ -1150,6 +1174,15 @@ CryptRsaDecrypt(
             }
         }
     } else {
+        RSAInitializePrivate(cIn, key);
+        // Maximum supported size for xilsecure hardware is 512 * 8 = 4096 Bits
+        uint8_t *privateExponentBuffer = TEE_Malloc(512, 0);
+        uint16_t new_size = 512;
+        privateExponent_t *pExp = &key->privateExponent;
+        BnToBytes((bigNum)&pExp->D, privateExponentBuffer, &new_size); 
+
+
+
         TEE_Result ret = TEE_SUCCESS; // return code        
         TEE_ObjectHandle tee_key = (TEE_ObjectHandle) NULL;
         TEE_Attribute rsa_attrs[3];
@@ -1177,8 +1210,8 @@ CryptRsaDecrypt(
         rsa_attrs[1].content.ref.length = 3;
         // Private key
         rsa_attrs[2].attributeID = TEE_ATTR_RSA_PRIVATE_EXPONENT;
-        rsa_attrs[2].content.ref.buffer = (uint8_t *)key->sensitive.sensitive.rsa.t.buffer;
-        rsa_attrs[2].content.ref.length = (uint16_t)key->sensitive.sensitive.rsa.t.size;
+        rsa_attrs[2].content.ref.buffer = privateExponentBuffer;
+        rsa_attrs[2].content.ref.length = new_size;
         
         DMSG("Setting key size to %d and message size to %d and output len to %d", (key->publicArea.unique.rsa.t.size * 8), in_len, cipher_len);
         // create a transient object
@@ -1199,11 +1232,6 @@ CryptRsaDecrypt(
         if (!decrypted || !cipher) {
           DMSG("Error");
         }
-        
-         DMSG("RSA Test Buffer");
-        for(uint16_t y = 0; y < in_len; y += 8) {
-            DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", ((uint8_t *)cIn->buffer)[y], ((uint8_t *)cIn->buffer)[y+1], ((uint8_t *)cIn->buffer)[y+2], ((uint8_t *)cIn->buffer)[y+3], ((uint8_t *)cIn->buffer)[y+4], ((uint8_t *)cIn->buffer)[y+5], ((uint8_t *)cIn->buffer)[y+6], ((uint8_t *)cIn->buffer)[y+7]);
-        }
 
         TEE_MemMove(cipher, (uint8_t *)(cIn->buffer), in_len);
 
@@ -1222,7 +1250,6 @@ CryptRsaDecrypt(
           TEE_FreeOperation(handle);
           DMSG("Error");
         }
-        DMSG("now we decrypt");
         // encrypt
         ret = TEE_AsymmetricDecrypt (handle, (TEE_Attribute *)NULL, 0, cipher, in_len, decrypted, &cipher_len);
         if (ret != TEE_SUCCESS) {
@@ -1230,16 +1257,14 @@ CryptRsaDecrypt(
           DMSG("Error");
         }
 
-        DMSG("RSA Encrypted Buffer has %d Bytes", cipher_len);
-        for(uint16_t y = 0; y < cipher_len; y += 8) {
-            DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", ((uint8_t *)decrypted)[y], ((uint8_t *)decrypted)[y+1], ((uint8_t *)decrypted)[y+2], ((uint8_t *)decrypted)[y+3], ((uint8_t *)decrypted)[y+4], ((uint8_t *)decrypted)[y+5], ((uint8_t *)decrypted)[y+6], ((uint8_t *)decrypted)[y+7]);
-        }
         TEE_MemMove(dOut->buffer, decrypted, cipher_len);
         dOut->size = cipher_len;
         // clean up
+        TEE_Free(privateExponentBuffer);
         TEE_FreeOperation(handle);
         TEE_FreeTransientObject(tee_key);
         TEE_Free(decrypted);
+        TEE_Free(cipher);
         retVal = TPM_RC_SUCCESS;
         DMSG("end of rsa encrypt");
     }
