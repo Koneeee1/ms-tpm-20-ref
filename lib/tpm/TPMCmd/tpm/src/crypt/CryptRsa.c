@@ -43,11 +43,13 @@
 #define CRYPT_RSA_C
 #include "Tpm.h"
 #include "swap.h"
+#include <utee_defines.h>
 #include <tee_internal_api.h>
 #include <tee_internal_api_extensions.h>
 #if     ALG_RSA
 #define SIZE_OF_VEC(vec) (sizeof(vec) - 1)
 //**  Obligatory Initialization Functions
+
 
 //*** CryptRsaInit()
 // Function called at _TPM_Init().
@@ -476,7 +478,6 @@ RSAES_PKCS1v1_5Encode(
     RAND_STATE  *rand
     )
 {
-    DMSG("RSAES_PKCS1v1_5Encode Padding"); 
     UINT32      ps = padded->size - message->size - 3;
 //
     if(message->size > padded->size - 11)
@@ -766,7 +767,6 @@ RSASSA_Encode(
     // Make sure that this combination will fit in the provided space
     if(fillSize < 8)
         ERROR_RETURN(TPM_RC_SIZE);
-    DMSG("This is where we do RSA");
     // Start filling
     *eOut++ = 0; // initial byte of zero
     *eOut++ = 1; // byte of 0x01
@@ -967,6 +967,14 @@ CryptRsaEncrypt(
     TPM_RC                       retVal = TPM_RC_SUCCESS;
     TPM2B_PUBLIC_KEY_RSA         dataIn;
 //
+    TEE_Time time_start;
+    TEE_Time time_end;
+    TEE_GetSystemTime(&time_start);
+
+    uint64_t cntpct = read_cntpct();
+    uint64_t cntfrq = read_cntfrq();
+    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
+
     // if the input and output buffers are the same, copy the input to a scratch
     // buffer so that things don't get messed up.
     if(dIn == &cOut->b)
@@ -977,7 +985,14 @@ CryptRsaEncrypt(
     // All encryption schemes return the same size of data
     cOut->t.size = key->publicArea.unique.rsa.t.size;
     TEST(scheme->scheme);
+    
+
+#ifdef TEEHACRYPTO
     uint8_t useHACrypto = 1;
+#else 
+    uint8_t useHACrypto = 0;
+#endif
+
     switch(scheme->scheme)
     {
         case ALG_NULL_VALUE:  // 'raw' encryption
@@ -1044,8 +1059,7 @@ CryptRsaEncrypt(
             rsa_attrs[2].attributeID = TEE_ATTR_RSA_PRIVATE_EXPONENT;
             rsa_attrs[2].content.ref.buffer = (uint8_t *)key->sensitive.sensitive.rsa.t.buffer;
             rsa_attrs[2].content.ref.length = (uint16_t)key->sensitive.sensitive.rsa.t.size;
-            
-            DMSG("Setting key size to %d and message size to %d", (key->publicArea.unique.rsa.t.size * 8), in_len);
+
             // create a transient object
             ret = TEE_AllocateTransientObject(TEE_TYPE_RSA_KEYPAIR, (key->publicArea.unique.rsa.t.size * 8), &tee_key);
             if (ret != TEE_SUCCESS) {
@@ -1064,11 +1078,6 @@ CryptRsaEncrypt(
             if (!to_encrypt || !cipher) {
               DMSG("Error");
             }
-            
-             DMSG("RSA Test Buffer");
-            for(uint16_t y = 0; y < in_len; y += 8) {
-		        DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", ((uint8_t *)dIn->buffer)[y], ((uint8_t *)dIn->buffer)[y+1], ((uint8_t *)dIn->buffer)[y+2], ((uint8_t *)dIn->buffer)[y+3], ((uint8_t *)dIn->buffer)[y+4], ((uint8_t *)dIn->buffer)[y+5], ((uint8_t *)dIn->buffer)[y+6], ((uint8_t *)dIn->buffer)[y+7]);
-	        }
 
             TEE_MemMove(to_encrypt, dIn->buffer, in_len);
 
@@ -1095,10 +1104,6 @@ CryptRsaEncrypt(
               DMSG("Error");
             }
 
-            DMSG("RSA Encrypted Buffer has %d Bytes", cipher_len);
-            for(uint16_t y = 0; y < cipher_len; y += 8) {
-		        DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", ((uint8_t *)cipher)[y], ((uint8_t *)cipher)[y+1], ((uint8_t *)cipher)[y+2], ((uint8_t *)cipher)[y+3], ((uint8_t *)cipher)[y+4], ((uint8_t *)cipher)[y+5], ((uint8_t *)cipher)[y+6], ((uint8_t *)cipher)[y+7]);
-	        }
             TEE_MemMove(cOut->b.buffer, cipher, cipher_len);
             cOut->b.size = cipher_len;
             // clean up
@@ -1106,10 +1111,20 @@ CryptRsaEncrypt(
             TEE_FreeTransientObject(tee_key);
             TEE_Free(cipher);
             TEE_Free(to_encrypt);
-            DMSG("end of rsa encrypt");
         
         }
     }
+    TEE_Time difference;
+    TEE_GetSystemTime(&time_end);
+    TEE_TIME_SUB(time_end, time_start, difference);
+    cntpct = read_cntpct();
+    cntfrq = read_cntfrq();
+    uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
+
+  DMSG("RSAEncrypt took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
+
+  DMSG("RSAEncrypt took exactly %lld", (long long int)(ptime_end - ptime_start));
+
 Exit:
     return retVal;
 }
@@ -1136,8 +1151,14 @@ CryptRsaDecrypt(
     )
 {
     TPM_RC                 retVal;
-
+    TEE_Time time_start;
+    TEE_Time time_end;
+    TEE_GetSystemTime(&time_start);
+#ifdef TEEHACRYPTO
     uint8_t useHACrypto = 1;
+#else 
+    uint8_t useHACrypto = 0;
+#endif
     // Make sure that the necessary parameters are provided
     pAssert(cIn != NULL && dOut != NULL && key != NULL);
 
@@ -1165,7 +1186,6 @@ CryptRsaDecrypt(
                     retVal = RSAES_Decode(dOut, cIn);
                     break;
                 case ALG_OAEP_VALUE:
-                    DMSG("hi OAEP");
                     retVal = OaepDecode(dOut, scheme->details.oaep.hashAlg, label, cIn);
                     break;
                 default:
@@ -1213,7 +1233,6 @@ CryptRsaDecrypt(
         rsa_attrs[2].content.ref.buffer = privateExponentBuffer;
         rsa_attrs[2].content.ref.length = new_size;
         
-        DMSG("Setting key size to %d and message size to %d and output len to %d", (key->publicArea.unique.rsa.t.size * 8), in_len, cipher_len);
         // create a transient object
         ret = TEE_AllocateTransientObject(TEE_TYPE_RSA_KEYPAIR, (key->publicArea.unique.rsa.t.size * 8), &tee_key);
         if (ret != TEE_SUCCESS) {
@@ -1266,8 +1285,13 @@ CryptRsaDecrypt(
         TEE_Free(decrypted);
         TEE_Free(cipher);
         retVal = TPM_RC_SUCCESS;
-        DMSG("end of rsa decrypt");
     }
+    TEE_Time difference;
+    TEE_GetSystemTime(&time_end);
+    TEE_TIME_SUB(time_end, time_start, difference);
+
+
+  DMSG("RSADecrypt took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
 Exit:
     return retVal;
 }
@@ -1291,7 +1315,9 @@ CryptRsaSign(
 {
     TPM_RC                retVal = TPM_RC_SUCCESS;
     UINT16                modSize;
-
+    TEE_Time time_start;
+    TEE_Time time_end;
+    TEE_GetSystemTime(&time_start);
     // parameter checks
     pAssert(sigOut != NULL && key != NULL && hIn != NULL);
 
@@ -1301,8 +1327,11 @@ CryptRsaSign(
     sigOut->signature.rsapss.sig.t.size = modSize;
 
     TEST(sigOut->sigAlg);
-
+#ifdef TEEHACRYPTO
     uint8_t useHACrypto = 1;
+#else 
+    uint8_t useHACrypto = 0;
+#endif
     if(!useHACrypto) {    
         switch(sigOut->sigAlg)
         {
@@ -1342,7 +1371,6 @@ CryptRsaSign(
         TEE_OperationHandle handle = (TEE_OperationHandle) NULL;
         TEE_Attribute rsa_attrs[3];
 
-        DMSG("Our hash size is %d Bytes", hIn->b.size);
         uint16_t digest_len = hIn->b.size;
         
 
@@ -1360,7 +1388,6 @@ CryptRsaSign(
         rsa_attrs[2].content.ref.buffer = privateExponentBuffer;
         rsa_attrs[2].content.ref.length = new_size;
 
-        DMSG("Setting key size to %d and digest len to %d and output len to %d", new_size*8, digest_len, signature_len);
         // create a transient object
         ret = TEE_AllocateTransientObject(TEE_TYPE_RSA_KEYPAIR, new_size*8, &tee_key);
         if (ret != TEE_SUCCESS) {
@@ -1412,7 +1439,6 @@ CryptRsaSign(
           TEE_FreeOperation(handle);
           DMSG("Error");
         }
-        DMSG("now we sign");
         // encrypt
         ret = TEE_AsymmetricSignDigest(handle, (TEE_Attribute *)NULL, 0, digest, digest_len, signature, &signature_len);
         if (ret != TEE_SUCCESS) {
@@ -1420,10 +1446,6 @@ CryptRsaSign(
           DMSG("Error");
         }
 
-            DMSG("RSA signature Buffer has %d Bytes", signature_len);
-    for(uint16_t y = 0; y < signature_len; y += 8) {
-        DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", ((uint8_t *)signature)[y], ((uint8_t *)signature)[y+1], ((uint8_t *)signature)[y+2], ((uint8_t *)signature)[y+3], ((uint8_t *)signature)[y+4], ((uint8_t *)signature)[y+5], ((uint8_t *)signature)[y+6], ((uint8_t *)signature)[y+7]);
-    }
         if(sigOut->sigAlg == ALG_RSASSA_VALUE) {
             TEE_MemMove(sigOut->signature.rsassa.sig.b.buffer, signature, signature_len);
             sigOut->signature.rsassa.sig.b.size = signature_len;
@@ -1438,10 +1460,14 @@ CryptRsaSign(
         TEE_Free(signature);
         TEE_Free(digest);
         retVal = TPM_RC_SUCCESS;
-        DMSG("end of rsa sign");
 
     }
+    TEE_Time difference;
+    TEE_GetSystemTime(&time_end);
+    TEE_TIME_SUB(time_end, time_start, difference);
 
+
+  DMSG("RSASign took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
     return retVal;
 }
 
@@ -1462,6 +1488,10 @@ CryptRsaValidateSignature(
     )
 {
     TPM_RC          retVal;
+    
+    TEE_Time time_start;
+    TEE_Time time_end;
+    TEE_GetSystemTime(&time_start);
 //
     // Fatal programming errors
     pAssert(key != NULL && sig != NULL && digest != NULL);
@@ -1479,7 +1509,11 @@ CryptRsaValidateSignature(
         ERROR_RETURN(TPM_RC_SIGNATURE);
 
     TEST(sig->sigAlg);
+#ifdef TEEHACRYPTO
     uint8_t useHACrypto = 1;
+#else 
+    uint8_t useHACrypto = 0;
+#endif
     if(!useHACrypto) {
         // Decrypt the block
         retVal = RSAEP(&sig->signature.rsassa.sig.b, key);
@@ -1516,7 +1550,6 @@ CryptRsaValidateSignature(
         TEE_OperationHandle handle = (TEE_OperationHandle) NULL;
         TEE_Attribute rsa_attrs[3];
 
-        DMSG("Our hash size is %d Bytes", digest->b.size);
         uint16_t local_digest_len = digest->b.size;
         
 
@@ -1534,7 +1567,6 @@ CryptRsaValidateSignature(
         rsa_attrs[2].content.ref.buffer = privateExponentBuffer;
         rsa_attrs[2].content.ref.length = new_size;
 
-        DMSG("Setting key size to %d and local_digest len to %d and output len to %d", new_size*8, local_digest_len, signature_len);
         // create a transient object
         ret = TEE_AllocateTransientObject(TEE_TYPE_RSA_KEYPAIR, new_size*8, &tee_key);
         if (ret != TEE_SUCCESS) {
@@ -1591,36 +1623,30 @@ CryptRsaValidateSignature(
           TEE_FreeOperation(handle);
           DMSG("Error");
         }
-        DMSG("now we verify with alg %x", sig->sigAlg);
-        DMSG("RSA signature Buffer has %d Bytes", signature_len);
-    for(uint16_t y = 0; y < signature_len; y += 8) {
-        DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", ((uint8_t *)signature)[y], ((uint8_t *)signature)[y+1], ((uint8_t *)signature)[y+2], ((uint8_t *)signature)[y+3], ((uint8_t *)signature)[y+4], ((uint8_t *)signature)[y+5], ((uint8_t *)signature)[y+6], ((uint8_t *)signature)[y+7]);
-    }
-        DMSG("RSA local digest Buffer has %d Bytes", local_digest_len);
-    for(uint16_t y = 0; y < local_digest_len; y += 8) {
-        DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", ((uint8_t *)local_digest)[y], ((uint8_t *)local_digest)[y+1], ((uint8_t *)local_digest)[y+2], ((uint8_t *)local_digest)[y+3], ((uint8_t *)local_digest)[y+4], ((uint8_t *)local_digest)[y+5], ((uint8_t *)local_digest)[y+6], ((uint8_t *)local_digest)[y+7]);
-    }
 
-
-
-        // encrypt
+        // Call Global Platform API
         ret = TEE_AsymmetricVerifyDigest(handle, (TEE_Attribute *)NULL, 0, local_digest, local_digest_len, signature, signature_len);
         if (ret != TEE_SUCCESS) {
-          TEE_FreeOperation(handle);
           retVal = TPM_RC_SIGNATURE;
           DMSG("Can't verify signature %x", ret);
         } else {
-          DMSG("Signature verified");
+          //DMSG("Signature verified");
           retVal = TPM_RC_SUCCESS;
         }
-        // clean up
+
+        // Clean up
         TEE_FreeOperation(handle);
         TEE_FreeTransientObject(tee_key);
         TEE_Free(signature);
         free(privateExponentBuffer);
         TEE_Free(local_digest);
-        DMSG("end of rsa signature verification");
     }
+    TEE_Time difference;
+    TEE_GetSystemTime(&time_end);
+    TEE_TIME_SUB(time_end, time_start, difference);
+
+
+  DMSG("RSAVerify took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
 Exit:
     return (retVal != TPM_RC_SUCCESS) ? TPM_RC_SIGNATURE : TPM_RC_SUCCESS;
 }
@@ -1687,7 +1713,9 @@ CryptRsaGenerateKey(
     TPMT_SENSITIVE      *sensitive = &rsaKey->sensitive;
     TPM_RC               retVal = TPM_RC_NO_RESULT;
 //
-
+    TEE_Time time_start;
+    TEE_Time time_end;
+    TEE_GetSystemTime(&time_start);
 // Need to make sure that the caller did not specify an exponent that is
 // not supported
     e = publicArea->parameters.rsaDetail.exponent;
@@ -1800,7 +1828,13 @@ CryptRsaGenerateKey(
                 retVal = TPM_RC_NO_RESULT;
             }
         }
-    }
+    }    
+    TEE_Time difference;
+    TEE_GetSystemTime(&time_end);
+    TEE_TIME_SUB(time_end, time_start, difference);
+
+
+  DMSG("RSAGenerateKey took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
 Exit:
     if(retVal == TPM_RC_SUCCESS)
         rsaKey->attributes.privateExp = SET;
