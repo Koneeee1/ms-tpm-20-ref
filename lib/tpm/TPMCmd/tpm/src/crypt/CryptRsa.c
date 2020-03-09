@@ -968,11 +968,11 @@ CryptRsaEncrypt(
     TPM_RC                       retVal = TPM_RC_SUCCESS;
     TPM2B_PUBLIC_KEY_RSA         dataIn;
 //
-    
+#ifdef BENCHMARK
     uint64_t cntpct = read_cntpct();
     uint64_t cntfrq = read_cntfrq();
     uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
-
+#endif
     // if the input and output buffers are the same, copy the input to a scratch
     // buffer so that things don't get messed up.
     if(dIn == &cOut->b)
@@ -1112,12 +1112,12 @@ CryptRsaEncrypt(
         
         }
     }
-
+#ifdef BENCHMARK
     cntpct = read_cntpct();
     cntfrq = read_cntfrq();
     uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
   DMSG("RSAEncrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
-
+#endif
 Exit:
     return retVal;
 }
@@ -1144,9 +1144,11 @@ CryptRsaDecrypt(
     )
 {
     TPM_RC          retVal;
+#ifdef BENCHMARK
     uint64_t cntpct = read_cntpct();
     uint64_t cntfrq = read_cntfrq();
     uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
+#endif
 #ifdef TEEHACRYPTO
     uint8_t useHACrypto = 1;
 #else 
@@ -1279,9 +1281,11 @@ CryptRsaDecrypt(
         TEE_Free(cipher);
         retVal = TPM_RC_SUCCESS;
     }
+#ifdef BENCHMARK
     cntpct = read_cntpct();
     cntfrq = read_cntfrq();
     uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
+#endif
   DMSG("RSADecrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
 Exit:
     return retVal;
