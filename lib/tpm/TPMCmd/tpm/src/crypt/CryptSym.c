@@ -203,10 +203,11 @@ CryptSymmetricEncrypt(
     {
 #if     ALG_CTR
         case ALG_CTR_VALUE: ;
+#ifdef BENCHMARK
     uint64_t cntpct = read_cntpct();
     uint64_t cntfrq = read_cntfrq();
     uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
-
+#endif
 
             // Xilinx requires 96 bit IV and 256 bit key
             // To encrypt / decrypt with 128 bit IV Value from CTR the last 4 bytes have to be 0x00, 0x00, 0x00, 0x02 and can then be safely ignored 
@@ -311,11 +312,12 @@ for(uint8_t y = 0; y < p_len; y += 8) {
                         *dOut++ = *dIn++ ^ *pT++;
                 }
             }
+#ifdef BENCHMARK
            cntpct = read_cntpct();
             cntfrq = read_cntfrq();
             uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
           DMSG("AESEncrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
-
+#endif
             break;
 #endif
 #if     ALG_OFB
@@ -523,11 +525,11 @@ CryptSymmetricDecrypt(
             break;
 #if     ALG_CTR
         case ALG_CTR_VALUE: ;
-            
+#ifdef BENCHMARK
             uint64_t cntpct = read_cntpct();
             uint64_t cntfrq = read_cntfrq();
             uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
-
+#endif
 
             // Xilinx requires 96 bit IV and 256 bit key
             // To encrypt / decrypt with 128 bit IV Value from CTR the last 4 bytes have to be 0x00, 0x00, 0x00, 0x02 and can then be safely ignored 
@@ -633,11 +635,12 @@ CryptSymmetricDecrypt(
                         *dOut++ = *dIn++ ^ *pT++;
                 }
             }
-               cntpct = read_cntpct();
+#ifdef BENCHMARK
+    cntpct = read_cntpct();
     cntfrq = read_cntfrq();
     uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
   DMSG("AESDecrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
-
+#endif
             break;
 #endif
 #if     ALG_ECB

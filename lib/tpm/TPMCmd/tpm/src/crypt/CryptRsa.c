@@ -1306,9 +1306,11 @@ CryptRsaSign(
 {
     TPM_RC                retVal = TPM_RC_SUCCESS;
     UINT16                modSize;
+#ifdef BENCHMARK
     uint64_t cntpct = read_cntpct();
     uint64_t cntfrq = read_cntfrq();
     uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
+#endif    
     // parameter checks
     pAssert(sigOut != NULL && key != NULL && hIn != NULL);
 
@@ -1453,10 +1455,12 @@ CryptRsaSign(
         retVal = TPM_RC_SUCCESS;
 
     }
+#ifdef BENCHMARK
     cntpct = read_cntpct();
     cntfrq = read_cntfrq();
     uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
   DMSG("RSASign took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
+#endif
    return retVal;
 }
 
@@ -1477,10 +1481,11 @@ CryptRsaValidateSignature(
     )
 {
     TPM_RC          retVal;
-    
+#ifdef BENCHMARK    
     uint64_t cntpct = read_cntpct();
     uint64_t cntfrq = read_cntfrq();
     uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
+#endif
 //
     // Fatal programming errors
     pAssert(key != NULL && sig != NULL && digest != NULL);
@@ -1630,10 +1635,12 @@ CryptRsaValidateSignature(
         free(privateExponentBuffer);
         TEE_Free(local_digest);
     }
+#ifdef BENCHMARK
     cntpct = read_cntpct();
     cntfrq = read_cntfrq();
     uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
   DMSG("RSAVerify took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
+#endif
 Exit:
     return (retVal != TPM_RC_SUCCESS) ? TPM_RC_SIGNATURE : TPM_RC_SUCCESS;
 }
