@@ -1297,7 +1297,6 @@ CryptRsaDecrypt(
 /*    cntpct = read_cntpct();
     cntfrq = read_cntfrq();
     uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
-#endif
   DMSG("RSADecrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));*/
     TEE_Time difference;
     TEE_GetSystemTime(&time_end);
@@ -1305,6 +1304,7 @@ CryptRsaDecrypt(
 
 
   DMSG("RSAGenerateKey took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
+#endif
 Exit:
     return retVal;
 }
