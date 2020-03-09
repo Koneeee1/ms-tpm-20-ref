@@ -116,14 +116,7 @@ int wc_Sha3_384_Final(wc_Sha3* sha, byte* out)
     // TEE expects data pointer in DoFinal call so we just give it empty data with length 0    
 
     void *null_ptr = NULL;
-    uint64_t cntpct = read_cntpct();
-    uint64_t cntfrq = read_cntfrq();
-    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
-    TEE_DigestDoFinal(sha->operation, null_ptr, 0, out, &hash_len);
-    cntpct = read_cntpct();
-    cntfrq = read_cntfrq();
-    uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
-  DMSG("Sha3_384 Hash Final took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
+    TEE_DigestDoFinal(sha->operation, null_ptr, 0, out, &hash_len)
     
     #ifdef LOCALDEBUG	
     DMSG("wc_Sha3_384_Final creates digest");
