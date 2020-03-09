@@ -42,6 +42,7 @@
 #include "Tpm.h"
 #include <string.h>
 #include "CryptSym.h"
+#include <utee_defines.h>
 #include <arm_user_sysreg.h>
 #include <tee_internal_api.h>
 #include <tee_internal_api_extensions.h>
@@ -204,9 +205,12 @@ CryptSymmetricEncrypt(
 #if     ALG_CTR
         case ALG_CTR_VALUE: ;
 #ifdef BENCHMARK
-    uint64_t cntpct = read_cntpct();
+/*    uint64_t cntpct = read_cntpct();
     uint64_t cntfrq = read_cntfrq();
-    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
+    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;*/
+    TEE_Time time_start;
+    TEE_Time time_end;
+    TEE_GetSystemTime(&time_start);
 #endif
 
             // Xilinx requires 96 bit IV and 256 bit key
@@ -313,10 +317,16 @@ for(uint8_t y = 0; y < p_len; y += 8) {
                 }
             }
 #ifdef BENCHMARK
-           cntpct = read_cntpct();
+/*           cntpct = read_cntpct();
             cntfrq = read_cntfrq();
             uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
-          DMSG("AESEncrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
+          DMSG("AESEncrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));*/
+    TEE_Time difference;
+    TEE_GetSystemTime(&time_end);
+    TEE_TIME_SUB(time_end, time_start, difference);
+
+
+  DMSG("RSAGenerateKey took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
 #endif
             break;
 #endif
@@ -526,9 +536,12 @@ CryptSymmetricDecrypt(
 #if     ALG_CTR
         case ALG_CTR_VALUE: ;
 #ifdef BENCHMARK
-            uint64_t cntpct = read_cntpct();
+/*            uint64_t cntpct = read_cntpct();
             uint64_t cntfrq = read_cntfrq();
-            uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
+            uint64_t ptime_start = (cntpct * 1000000) / cntfrq;*/
+    TEE_Time time_start;
+    TEE_Time time_end;
+    TEE_GetSystemTime(&time_start);
 #endif
 
             // Xilinx requires 96 bit IV and 256 bit key
@@ -636,10 +649,16 @@ CryptSymmetricDecrypt(
                 }
             }
 #ifdef BENCHMARK
-    cntpct = read_cntpct();
+/*    cntpct = read_cntpct();
     cntfrq = read_cntfrq();
     uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
-  DMSG("AESDecrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
+  DMSG("AESDecrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));*/
+    TEE_Time difference;
+    TEE_GetSystemTime(&time_end);
+    TEE_TIME_SUB(time_end, time_start, difference);
+
+
+  DMSG("RSAGenerateKey took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
 #endif
             break;
 #endif

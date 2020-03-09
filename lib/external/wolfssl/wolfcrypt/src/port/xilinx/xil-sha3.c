@@ -109,9 +109,12 @@ int wc_Sha3_384_Update(wc_Sha3* sha, const byte* data, word32 len)
 int wc_Sha3_384_Final(wc_Sha3* sha, byte* out)
 {
 #ifdef BENCHMARK
-    uint64_t cntpct = read_cntpct();
+/*    uint64_t cntpct = read_cntpct();
     uint64_t cntfrq = read_cntfrq();
-    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
+    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;*/
+    TEE_Time time_start;
+    TEE_Time time_end;
+    TEE_GetSystemTime(&time_start);
 #endif
     if (sha == NULL || out == NULL) {
         return BAD_FUNC_ARG;
@@ -123,10 +126,16 @@ int wc_Sha3_384_Final(wc_Sha3* sha, byte* out)
     void *null_ptr = NULL;
     TEE_DigestDoFinal(sha->operation, null_ptr, 0, out, &hash_len);
 #ifdef BENCHMARK
-    cntpct = read_cntpct();
+/*    cntpct = read_cntpct();
     cntfrq = read_cntfrq();
     uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
-    DMSG("Sha3 Final took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
+    DMSG("Sha3 Final took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));*/
+    TEE_Time difference;
+    TEE_GetSystemTime(&time_end);
+    TEE_TIME_SUB(time_end, time_start, difference);
+
+
+  DMSG("RSAGenerateKey took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
 #endif
     
     #ifdef LOCALDEBUG	

@@ -969,9 +969,12 @@ CryptRsaEncrypt(
     TPM2B_PUBLIC_KEY_RSA         dataIn;
 //
 #ifdef BENCHMARK
-    uint64_t cntpct = read_cntpct();
+/*    uint64_t cntpct = read_cntpct();
     uint64_t cntfrq = read_cntfrq();
-    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
+    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;*/
+    TEE_Time time_start;
+    TEE_Time time_end;
+    TEE_GetSystemTime(&time_start);
 #endif
     // if the input and output buffers are the same, copy the input to a scratch
     // buffer so that things don't get messed up.
@@ -1113,10 +1116,16 @@ CryptRsaEncrypt(
         }
     }
 #ifdef BENCHMARK
-    cntpct = read_cntpct();
+/*    cntpct = read_cntpct();
     cntfrq = read_cntfrq();
     uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
-  DMSG("RSAEncrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
+  DMSG("RSAEncrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));*/
+    TEE_Time difference;
+    TEE_GetSystemTime(&time_end);
+    TEE_TIME_SUB(time_end, time_start, difference);
+
+
+  DMSG("RSAGenerateKey took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
 #endif
 Exit:
     return retVal;
@@ -1145,9 +1154,12 @@ CryptRsaDecrypt(
 {
     TPM_RC          retVal;
 #ifdef BENCHMARK
-    uint64_t cntpct = read_cntpct();
+/*    uint64_t cntpct = read_cntpct();
     uint64_t cntfrq = read_cntfrq();
-    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
+    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;*/
+    TEE_Time time_start;
+    TEE_Time time_end;
+    TEE_GetSystemTime(&time_start);
 #endif
 #ifdef TEEHACRYPTO
     uint8_t useHACrypto = 1;
@@ -1282,11 +1294,17 @@ CryptRsaDecrypt(
         retVal = TPM_RC_SUCCESS;
     }
 #ifdef BENCHMARK
-    cntpct = read_cntpct();
+/*    cntpct = read_cntpct();
     cntfrq = read_cntfrq();
     uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
 #endif
-  DMSG("RSADecrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
+  DMSG("RSADecrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));*/
+    TEE_Time difference;
+    TEE_GetSystemTime(&time_end);
+    TEE_TIME_SUB(time_end, time_start, difference);
+
+
+  DMSG("RSAGenerateKey took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
 Exit:
     return retVal;
 }
@@ -1311,9 +1329,12 @@ CryptRsaSign(
     TPM_RC                retVal = TPM_RC_SUCCESS;
     UINT16                modSize;
 #ifdef BENCHMARK
-    uint64_t cntpct = read_cntpct();
+/*    uint64_t cntpct = read_cntpct();
     uint64_t cntfrq = read_cntfrq();
-    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
+    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;*/
+    TEE_Time time_start;
+    TEE_Time time_end;
+    TEE_GetSystemTime(&time_start);
 #endif    
     // parameter checks
     pAssert(sigOut != NULL && key != NULL && hIn != NULL);
@@ -1460,10 +1481,16 @@ CryptRsaSign(
 
     }
 #ifdef BENCHMARK
-    cntpct = read_cntpct();
+/*    cntpct = read_cntpct();
     cntfrq = read_cntfrq();
     uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
-  DMSG("RSASign took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
+  DMSG("RSASign took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));*/
+    TEE_Time difference;
+    TEE_GetSystemTime(&time_end);
+    TEE_TIME_SUB(time_end, time_start, difference);
+
+
+  DMSG("RSAGenerateKey took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
 #endif
    return retVal;
 }
@@ -1486,9 +1513,12 @@ CryptRsaValidateSignature(
 {
     TPM_RC          retVal;
 #ifdef BENCHMARK    
-    uint64_t cntpct = read_cntpct();
+/*    uint64_t cntpct = read_cntpct();
     uint64_t cntfrq = read_cntfrq();
-    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
+    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;*/
+    TEE_Time time_start;
+    TEE_Time time_end;
+    TEE_GetSystemTime(&time_start);
 #endif
 //
     // Fatal programming errors
@@ -1640,10 +1670,16 @@ CryptRsaValidateSignature(
         TEE_Free(local_digest);
     }
 #ifdef BENCHMARK
-    cntpct = read_cntpct();
+/*    cntpct = read_cntpct();
     cntfrq = read_cntfrq();
     uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
-  DMSG("RSAVerify took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
+  DMSG("RSAVerify took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));*/
+    TEE_Time difference;
+    TEE_GetSystemTime(&time_end);
+    TEE_TIME_SUB(time_end, time_start, difference);
+
+
+  DMSG("RSAGenerateKey took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
 #endif
 Exit:
     return (retVal != TPM_RC_SUCCESS) ? TPM_RC_SIGNATURE : TPM_RC_SUCCESS;

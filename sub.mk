@@ -29,7 +29,7 @@ cflags-y += -DNDEBUG
 endif
 
 cflags-y += -DTEEHACRYPTO
-#cflags-y += -DBENCHMARK
+cflags-y += -DBENCHMARK
 
 subdirs-y += lib
 
