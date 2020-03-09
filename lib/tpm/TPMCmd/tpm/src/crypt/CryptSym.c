@@ -42,6 +42,7 @@
 #include "Tpm.h"
 #include <string.h>
 #include "CryptSym.h"
+#include <arm_user_sysreg.h>
 #include <tee_internal_api.h>
 #include <tee_internal_api_extensions.h>
 
@@ -167,6 +168,13 @@ CryptSymmetricEncrypt(
     BYTE                *iv;
     BYTE                 defaultIv[MAX_SYM_BLOCK_SIZE] = {0};
 //
+
+#ifdef TEEHACRYPTO
+    uint8_t useHACrypto = 1;
+#else
+    uint8_t useHACrypto = 0;
+#endif
+
     pAssert(dOut != NULL && key != NULL && dIn != NULL);
     if(dSize == 0)
         return TPM_RC_SUCCESS;
@@ -194,12 +202,15 @@ CryptSymmetricEncrypt(
     switch(mode)
     {
 #if     ALG_CTR
-        case ALG_CTR_VALUE:
- DMSG("AES_CTR_ENCRYPT");
+        case ALG_CTR_VALUE: ;
+    uint64_t cntpct = read_cntpct();
+    uint64_t cntfrq = read_cntfrq();
+    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
 
 
             // Xilinx requires 96 bit IV and 256 bit key
-            if(keySizeInBits == 256) {
+            // To encrypt / decrypt with 128 bit IV Value from CTR the last 4 bytes have to be 0x00, 0x00, 0x00, 0x02 and can then be safely ignored 
+            if(keySizeInBits == 256 && ivInOut->t.buffer[12] == 0x00 && ivInOut->t.buffer[13] == 0x00 && ivInOut->t.buffer[14] == 0x00 && ivInOut->t.buffer[15] == 0x02 && useHACrypto) {
             uint8_t k[32], iv_b[64], tag[16];
             uint8_t t[16] = { 0 };
             uint8_t aad[32] = { 0 };
@@ -214,7 +225,6 @@ CryptSymmetricEncrypt(
             memcpy(iv_b, ivInOut->t.buffer, iv_len);
             memcpy(p, dIn, p_len);
 
-            DMSG("USING MLE TEE INTERFACE");
             /*if (ivInOut->t.size != 12) {
 	        DMSG("Changing size %x to 12", ivInOut->t.size); 
 	    }*/
@@ -258,22 +268,23 @@ for(uint8_t y = 0; y < iv_len; y += 8) {
         TEE_FreeOperation(handle2);
         DMSG("Error AEInit %x", ret);
     }
-    
+    /*
     DMSG("AES In Data");
 for(uint8_t y = 0; y < p_len; y += 8) {
 		DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", p[y], p[y+1], p[y+2], p[y+3], p[y+4], p[y+5], p[y+6], p[y+7]);
 	}
+    */
     ret = TEE_AEEncryptFinal(handle2, p, p_len, c, &c_len, t, &t_len);
     if (ret != TEE_SUCCESS) {
         TEE_FreeOperation(handle2);
         DMSG("Error AEInit %x", ret);
     }
-
+/*
     DMSG("AES Encrypted Buffer");
 for(uint8_t y = 0; y < p_len; y += 8) {
 		DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", c[y], c[y+1], c[y+2], c[y+3], c[y+4], c[y+5], c[y+6], c[y+7]);
 	}
-
+*/
     // Release the session resources
     if (key_handle != TEE_HANDLE_NULL) {
         TEE_FreeTransientObject(key_handle);
@@ -300,6 +311,11 @@ for(uint8_t y = 0; y < p_len; y += 8) {
                         *dOut++ = *dIn++ ^ *pT++;
                 }
             }
+           cntpct = read_cntpct();
+            cntfrq = read_cntfrq();
+            uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
+          DMSG("AESEncrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
+
             break;
 #endif
 #if     ALG_OFB
@@ -409,6 +425,12 @@ CryptSymmetricDecrypt(
     TpmCryptSetSymKeyCall_t        decrypt;
     BYTE                 defaultIv[MAX_SYM_BLOCK_SIZE] = {0};
 
+#ifdef TEEHACRYPTO
+    uint8_t useHACrypto = 1;
+#else
+    uint8_t useHACrypto = 0;
+#endif
+
     // These are used but the compiler can't tell because they are initialized
     // in case statements and it can't tell if they are always initialized
     // when needed, so... Comment these out if the compiler can tell or doesn't
@@ -500,12 +522,16 @@ CryptSymmetricDecrypt(
 
             break;
 #if     ALG_CTR
-        case ALG_CTR_VALUE:
-             DMSG("AES_CTR_DECRYPT");
+        case ALG_CTR_VALUE: ;
+            
+            uint64_t cntpct = read_cntpct();
+            uint64_t cntfrq = read_cntfrq();
+            uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
 
 
             // Xilinx requires 96 bit IV and 256 bit key
-            if(keySizeInBits == 256) {
+            // To encrypt / decrypt with 128 bit IV Value from CTR the last 4 bytes have to be 0x00, 0x00, 0x00, 0x02 and can then be safely ignored 
+            if(keySizeInBits == 256 && ivInOut->t.buffer[12] == 0x00 && ivInOut->t.buffer[13] == 0x00 && ivInOut->t.buffer[14] == 0x00 && ivInOut->t.buffer[15] == 0x02 && useHACrypto) {
             uint8_t k[32], iv_b[64], tag[16];
             uint8_t t[16] = { 0 };
             uint8_t aad[32] = { 0 };
@@ -520,7 +546,6 @@ CryptSymmetricDecrypt(
             memcpy(iv_b, ivInOut->t.buffer, iv_len);
             memcpy(p, dIn, p_len);
 
-            DMSG("USING MLE TEE INTERFACE");
             /*if (ivInOut->t.size != 12) {
 	        DMSG("Changing size %x to 12", ivInOut->t.size); 
 	    }*/
@@ -566,21 +591,22 @@ CryptSymmetricDecrypt(
                 DMSG("Error AEInit %x", ret);
             }
             
-
+/*
             DMSG("AES In Data");
         for(uint8_t y = 0; y < p_len; y += 8) {
 		        DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", p[y], p[y+1], p[y+2], p[y+3], p[y+4], p[y+5], p[y+6], p[y+7]);
-	        }
+	        } */
             ret = TEE_AEEncryptFinal(handle2, p, p_len, c, &c_len, t, &t_len);
             if (ret != TEE_SUCCESS) {
                 TEE_FreeOperation(handle2);
                 DMSG("Error AEInit %x", ret);
             }
-
+/*
             DMSG("AES Encrypted Buffer");
         for(uint8_t y = 0; y < p_len; y += 8) {
 		        DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", c[y], c[y+1], c[y+2], c[y+3], c[y+4], c[y+5], c[y+6], c[y+7]);
 	        }
+*/
 
 	    // Release the session resources
 	    if (key_handle != TEE_HANDLE_NULL) {
@@ -607,6 +633,11 @@ CryptSymmetricDecrypt(
                         *dOut++ = *dIn++ ^ *pT++;
                 }
             }
+               cntpct = read_cntpct();
+    cntfrq = read_cntfrq();
+    uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
+  DMSG("AESDecrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
+
             break;
 #endif
 #if     ALG_ECB
@@ -659,5 +690,6 @@ CryptSymKeyValidate(
 #endif // ALG_TDES
     return TPM_RC_SUCCESS;
 }
+
 
 

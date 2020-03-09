@@ -28,6 +28,9 @@ cflags-y += -Os
 cflags-y += -DNDEBUG
 endif
 
+cflags-y += -DTEEHACRYPTO
+cflags-y += -DBENCHMARK
+
 subdirs-y += lib
 
 global-incdirs-y += include

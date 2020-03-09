@@ -43,6 +43,7 @@
 #define CRYPT_RSA_C
 #include "Tpm.h"
 #include "swap.h"
+#include <arm_user_sysreg.h>
 #include <utee_defines.h>
 #include <tee_internal_api.h>
 #include <tee_internal_api_extensions.h>
@@ -967,10 +968,7 @@ CryptRsaEncrypt(
     TPM_RC                       retVal = TPM_RC_SUCCESS;
     TPM2B_PUBLIC_KEY_RSA         dataIn;
 //
-    TEE_Time time_start;
-    TEE_Time time_end;
-    TEE_GetSystemTime(&time_start);
-
+    
     uint64_t cntpct = read_cntpct();
     uint64_t cntfrq = read_cntfrq();
     uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
@@ -1114,16 +1112,11 @@ CryptRsaEncrypt(
         
         }
     }
-    TEE_Time difference;
-    TEE_GetSystemTime(&time_end);
-    TEE_TIME_SUB(time_end, time_start, difference);
+
     cntpct = read_cntpct();
     cntfrq = read_cntfrq();
     uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
-
-  DMSG("RSAEncrypt took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
-
-  DMSG("RSAEncrypt took exactly %lld", (long long int)(ptime_end - ptime_start));
+  DMSG("RSAEncrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
 
 Exit:
     return retVal;
@@ -1150,10 +1143,10 @@ CryptRsaDecrypt(
     const TPM2B         *label          // IN: in case it is needed for the scheme
     )
 {
-    TPM_RC                 retVal;
-    TEE_Time time_start;
-    TEE_Time time_end;
-    TEE_GetSystemTime(&time_start);
+    TPM_RC          retVal;
+    uint64_t cntpct = read_cntpct();
+    uint64_t cntfrq = read_cntfrq();
+    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
 #ifdef TEEHACRYPTO
     uint8_t useHACrypto = 1;
 #else 
@@ -1286,12 +1279,10 @@ CryptRsaDecrypt(
         TEE_Free(cipher);
         retVal = TPM_RC_SUCCESS;
     }
-    TEE_Time difference;
-    TEE_GetSystemTime(&time_end);
-    TEE_TIME_SUB(time_end, time_start, difference);
-
-
-  DMSG("RSADecrypt took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
+    cntpct = read_cntpct();
+    cntfrq = read_cntfrq();
+    uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
+  DMSG("RSADecrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
 Exit:
     return retVal;
 }
@@ -1315,9 +1306,9 @@ CryptRsaSign(
 {
     TPM_RC                retVal = TPM_RC_SUCCESS;
     UINT16                modSize;
-    TEE_Time time_start;
-    TEE_Time time_end;
-    TEE_GetSystemTime(&time_start);
+    uint64_t cntpct = read_cntpct();
+    uint64_t cntfrq = read_cntfrq();
+    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
     // parameter checks
     pAssert(sigOut != NULL && key != NULL && hIn != NULL);
 
@@ -1462,13 +1453,11 @@ CryptRsaSign(
         retVal = TPM_RC_SUCCESS;
 
     }
-    TEE_Time difference;
-    TEE_GetSystemTime(&time_end);
-    TEE_TIME_SUB(time_end, time_start, difference);
-
-
-  DMSG("RSASign took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
-    return retVal;
+    cntpct = read_cntpct();
+    cntfrq = read_cntfrq();
+    uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
+  DMSG("RSASign took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
+   return retVal;
 }
 
 //*** CryptRsaValidateSignature()
@@ -1489,9 +1478,9 @@ CryptRsaValidateSignature(
 {
     TPM_RC          retVal;
     
-    TEE_Time time_start;
-    TEE_Time time_end;
-    TEE_GetSystemTime(&time_start);
+    uint64_t cntpct = read_cntpct();
+    uint64_t cntfrq = read_cntfrq();
+    uint64_t ptime_start = (cntpct * 1000000) / cntfrq;
 //
     // Fatal programming errors
     pAssert(key != NULL && sig != NULL && digest != NULL);
@@ -1641,12 +1630,10 @@ CryptRsaValidateSignature(
         free(privateExponentBuffer);
         TEE_Free(local_digest);
     }
-    TEE_Time difference;
-    TEE_GetSystemTime(&time_end);
-    TEE_TIME_SUB(time_end, time_start, difference);
-
-
-  DMSG("RSAVerify took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
+    cntpct = read_cntpct();
+    cntfrq = read_cntfrq();
+    uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
+  DMSG("RSAVerify took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));
 Exit:
     return (retVal != TPM_RC_SUCCESS) ? TPM_RC_SIGNATURE : TPM_RC_SUCCESS;
 }

@@ -39,7 +39,7 @@
 #ifdef WOLFSSL_ASYNC_CRYPT
     #include <wolfssl/wolfcrypt/async.h>
 #endif
-
+#include <arm_user_sysreg.h>
 #include <tee_internal_api.h>
 #include <tee_internal_api_extensions.h>
 /* in bytes */
