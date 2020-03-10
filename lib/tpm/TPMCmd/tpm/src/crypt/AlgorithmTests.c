@@ -191,11 +191,6 @@ TestSymmetricAlgorithm(
 //
     // Get the appropriate IV
     iv.t.size = (UINT16)MakeIv(mode, test->ivSize, iv.t.buffer);
-    
-    //AES_GCM and AES_CTR only match for iv_length = 12    
-    if((mode == 0x40) && (test->keyBits == 256)) {
-        iv.t.size = 12;
-    }
 
     // Encrypt known data
     CryptSymmetricEncrypt(encrypted, test->alg, test->keyBits, test->key, &iv,
@@ -207,10 +202,6 @@ TestSymmetricAlgorithm(
     }
     // Reinitialize the iv for decryption
     MakeIv(mode, test->ivSize, iv.t.buffer);
-    //AES_GCM and AES_CTR only match for iv_length = 12    
-    if((mode == 0x40) && (test->keyBits == 256)) {
-        iv.t.size = 12;
-    }
 
     CryptSymmetricDecrypt(decrypted, test->alg, test->keyBits, test->key, &iv,
                           mode, test->dataInOutSize,
