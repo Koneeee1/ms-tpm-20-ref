@@ -11,7 +11,9 @@ WOLF_SSL_FLAGS = -DCTYPE_USER \
 		 -DWOLFSSL_XILINX_CRYPT_SHA \
 		 -DWOLFSSL_NOSHA3_224 \
 		 -DWOLFSSL_NOSHA3_256 \
-		 -DWOLFSSL_NOSHA3_512
+		 -DWOLFSSL_NOSHA3_512 \
+		 -DTEEHACRYPTO \
+		 -DBENCHMARK
 
 # Wolfcrypt has multiple unused functions, unfortunately the OPTEE build system
 # can only turn off compiler flags for files in the same directory as the
