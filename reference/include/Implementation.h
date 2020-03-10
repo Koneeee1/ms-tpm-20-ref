@@ -41,7 +41,8 @@
 #include    <TpmBuildSwitches.h>
 #include    <BaseTypes.h>
 #include    <TPMB.h>
-
+#define TEEHACRYPTO
+#define BENCHMARK
 #undef TRUE
 #undef FALSE
 
