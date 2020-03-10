@@ -263,10 +263,11 @@ CryptSymmetricEncrypt(
 	if (ret != TEE_SUCCESS) {
 		DMSG("TEE_SetOperationKey failed %d", ret);
 	}
-    DMSG("5 IV len %d", iv_len);
+		    /*
+    DMSG(" IV len %d", iv_len);
 for(uint8_t y = 0; y < iv_len; y += 8) {
 	DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", iv_b[y], iv_b[y+1], iv_b[y+2], iv_b[y+3], iv_b[y+4], iv_b[y+5], iv_b[y+6], iv_b[y+7]);
-	}
+	}*/
     
     ret = TEE_AEInit(handle2, iv_b, iv_len, t_len * 8, 0, 0);
     if (ret != TEE_SUCCESS) {
@@ -595,10 +596,11 @@ CryptSymmetricDecrypt(
 	        if (ret != TEE_SUCCESS) {
 		        DMSG("TEE_SetOperationKey failed %d", ret);
 	        }
-            DMSG("5 IV len %d", iv_len);
+		    /*
+            DMSG("IV len %d", iv_len);
         for(uint8_t y = 0; y < iv_len; y += 8) {
 	        DMSG("%02x%02x%02x%02x%02x%02x%02x%02x", iv_b[y], iv_b[y+1], iv_b[y+2], iv_b[y+3], iv_b[y+4], iv_b[y+5], iv_b[y+6], iv_b[y+7]);
-	        }
+	        }*/
             
             ret = TEE_AEInit(handle2, iv_b, iv_len, t_len * 8, 0, 0);
             if (ret != TEE_SUCCESS) {
