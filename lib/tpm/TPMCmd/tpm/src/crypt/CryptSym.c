@@ -324,7 +324,7 @@ for(uint8_t y = 0; y < p_len; y += 8) {
     TEE_TIME_SUB(time_end, time_start, difference);
 
 
-  DMSG("AesEncryptGenerateKey took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
+  DMSG("AesEncrypt took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
 #endif
             break;
 #endif
