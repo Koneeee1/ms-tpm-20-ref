@@ -230,9 +230,6 @@ CryptSymmetricEncrypt(
             memcpy(iv_b, ivInOut->t.buffer, iv_len);
             memcpy(p, dIn, p_len);
 
-            if (ivInOut->t.size != 12) {
-	        DMSG("Changing size %x to 12", ivInOut->t.size); 
-	    }
             TEE_Result ret = TEE_SUCCESS;
             TEE_OperationHandle handle2 = (TEE_OperationHandle) NULL;
     TEE_ObjectHandle key_handle = (TEE_ObjectHandle) NULL;
@@ -562,9 +559,7 @@ CryptSymmetricDecrypt(
             memcpy(iv_b, ivInOut->t.buffer, iv_len);
             memcpy(p, dIn, p_len);
 
-            if (ivInOut->t.size != 12) {
-	        DMSG("Changing size %x to 12", ivInOut->t.size); 
-	    }
+
             TEE_Result ret = TEE_SUCCESS;
             TEE_OperationHandle handle2 = (TEE_OperationHandle) NULL;
             TEE_ObjectHandle key_handle = (TEE_ObjectHandle) NULL;
