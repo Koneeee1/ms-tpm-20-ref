@@ -132,10 +132,7 @@ int wc_Sha3_384_Final(wc_Sha3* sha, byte* out)
     DMSG("Sha3 Final took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));*/
     TEE_Time difference;
     TEE_GetSystemTime(&time_end);
-    TEE_TIME_SUB(time_end, time_start, difference);
-
-
-  DMSG("RSAGenerateKey took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
+    DMSG("Sha3_384 took %" PRIu64 " microseconds", (time_end.micros - time_start.micros));
 #endif
     
     #ifdef LOCALDEBUG	
