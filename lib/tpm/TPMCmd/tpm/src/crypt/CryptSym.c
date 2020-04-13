@@ -319,12 +319,8 @@ for(uint8_t y = 0; y < p_len; y += 8) {
             cntfrq = read_cntfrq();
             uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
           DMSG("AESEncrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));*/
-    TEE_Time difference;
     TEE_GetSystemTime(&time_end);
-    TEE_TIME_SUB(time_end, time_start, difference);
-
-
-  DMSG("AesEncrypt took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
+DMSG("Aes_Encrypt took %" PRIu64 " microseconds", (time_end.micros - time_start.micros));
 #endif
             break;
 #endif
@@ -650,12 +646,9 @@ CryptSymmetricDecrypt(
     cntfrq = read_cntfrq();
     uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
   DMSG("AESDecrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));*/
-    TEE_Time difference;
     TEE_GetSystemTime(&time_end);
     TEE_TIME_SUB(time_end, time_start, difference);
-
-
-  DMSG("AESDecrypt took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
+    DMSG("RSADecrypt took %" PRIu64 " microseconds", (time_end.micros - time_start.micros));
 #endif
             break;
 #endif
