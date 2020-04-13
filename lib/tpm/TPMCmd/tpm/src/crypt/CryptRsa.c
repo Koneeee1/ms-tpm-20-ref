@@ -1476,7 +1476,7 @@ CryptRsaSign(
 #ifdef BENCHMARK
     TEE_GetSystemTime(&time_end);
 
-
+DMSG("useHACrypto = %x", useHACrypto);
 DMSG("RSASign took %" PRIu64 " microseconds", (time_end.micros - time_start.micros));
 #endif
    return retVal;
