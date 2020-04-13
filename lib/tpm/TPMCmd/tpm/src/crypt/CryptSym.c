@@ -647,8 +647,7 @@ CryptSymmetricDecrypt(
     uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
   DMSG("AESDecrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));*/
     TEE_GetSystemTime(&time_end);
-    TEE_TIME_SUB(time_end, time_start, difference);
-    DMSG("RSADecrypt took %" PRIu64 " microseconds", (time_end.micros - time_start.micros));
+    DMSG("AesDecrypt took %" PRIu64 " microseconds", (time_end.micros - time_start.micros));
 #endif
             break;
 #endif
