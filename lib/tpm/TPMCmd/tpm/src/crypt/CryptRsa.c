@@ -1120,12 +1120,9 @@ CryptRsaEncrypt(
     cntfrq = read_cntfrq();
     uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
   DMSG("RSAEncrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));*/
-    TEE_Time difference;
+
     TEE_GetSystemTime(&time_end);
-    TEE_TIME_SUB(time_end, time_start, difference);
-
-
-  DMSG("RSAGenerateKey took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
+DMSG("RSAEncrypt took %" PRIu64 " microseconds", (time_end.micros - time_start.micros));
 #endif
 Exit:
     return retVal;
@@ -1298,12 +1295,8 @@ CryptRsaDecrypt(
     cntfrq = read_cntfrq();
     uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
   DMSG("RSADecrypt took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));*/
-    TEE_Time difference;
     TEE_GetSystemTime(&time_end);
-    TEE_TIME_SUB(time_end, time_start, difference);
-
-
-  DMSG("RSAGenerateKey took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
+DMSG("RSADecrypt took %" PRIu64 " microseconds", (time_end.micros - time_start.micros));
 #endif
 Exit:
     return retVal;
@@ -1481,16 +1474,10 @@ CryptRsaSign(
 
     }
 #ifdef BENCHMARK
-/*    cntpct = read_cntpct();
-    cntfrq = read_cntfrq();
-    uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
-  DMSG("RSASign took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));*/
-    TEE_Time difference;
     TEE_GetSystemTime(&time_end);
-    TEE_TIME_SUB(time_end, time_start, difference);
 
 
-  DMSG("RSAGenerateKey took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
+DMSG("RSASign took %" PRIu64 " microseconds", (time_end.micros - time_start.micros));
 #endif
    return retVal;
 }
@@ -1670,16 +1657,8 @@ CryptRsaValidateSignature(
         TEE_Free(local_digest);
     }
 #ifdef BENCHMARK
-/*    cntpct = read_cntpct();
-    cntfrq = read_cntfrq();
-    uint64_t ptime_end = (cntpct * 1000000) / cntfrq;
-  DMSG("RSAVerify took exactly %lld microseconds", (long long int)(ptime_end - ptime_start));*/
-    TEE_Time difference;
     TEE_GetSystemTime(&time_end);
-    TEE_TIME_SUB(time_end, time_start, difference);
-
-
-  DMSG("RSAGenerateKey took exactly %d seconds and %d milliseconds", difference.seconds, difference.millis);
+DMSG("RSAVerify took %" PRIu64 " microseconds", (time_end.micros - time_start.micros));
 #endif
 Exit:
     return (retVal != TPM_RC_SUCCESS) ? TPM_RC_SIGNATURE : TPM_RC_SUCCESS;
