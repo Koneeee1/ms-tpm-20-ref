@@ -734,7 +734,11 @@ static int wc_Sha3Final(wc_Sha3* sha3, byte* hash, byte p, byte len)
     if (sha3 == NULL || hash == NULL) {
         return BAD_FUNC_ARG;
     }
-
+#ifdef BENCHMARK
+    TEE_Time time_start;
+    TEE_Time time_end;
+    TEE_GetSystemTime(&time_start);
+#endif
 #if defined(WOLFSSL_ASYNC_CRYPT) && defined(WC_ASYNC_ENABLE_SHA3)
     if (sha3->asyncDev.marker == WOLFSSL_ASYNC_MARKER_SHA3) {
     #if defined(HAVE_INTEL_QA) && defined(QAT_V2)
@@ -751,6 +755,12 @@ static int wc_Sha3Final(wc_Sha3* sha3, byte* hash, byte p, byte len)
 #endif /* WOLFSSL_ASYNC_CRYPT */
 
     ret = Sha3Final(sha3, hash, p, len);
+#ifdef BENCHMARK
+    TEE_Time difference;
+    TEE_GetSystemTime(&time_end);
+    DMSG("Sha3_384 took %" PRIu64 " microseconds", (time_end.micros - time_start.micros));
+#endif
+    
     if (ret != 0)
         return ret;
 
