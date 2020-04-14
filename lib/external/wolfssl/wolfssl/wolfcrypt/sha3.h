@@ -71,17 +71,15 @@ enum {
 #endif
 };
 
-#ifndef NO_OLD_WC_NAMES
-    #define SHA3_224             WC_SHA3_224
-    #define SHA3_224_DIGEST_SIZE WC_SHA3_224_DIGEST_SIZE
-    #define SHA3_256             WC_SHA3_256
-    #define SHA3_256_DIGEST_SIZE WC_SHA3_256_DIGEST_SIZE
-    #define SHA3_384             WC_SHA3_384
-    #define SHA3_384_DIGEST_SIZE WC_SHA3_384_DIGEST_SIZE
-    #define SHA3_512             WC_SHA3_512
-    #define SHA3_512_DIGEST_SIZE WC_SHA3_512_DIGEST_SIZE
-    #define Sha3 wc_Sha3
-#endif
+#define SHA3_224             WC_SHA3_224
+#define SHA3_224_DIGEST_SIZE WC_SHA3_224_DIGEST_SIZE
+#define SHA3_256             WC_SHA3_256
+#define SHA3_256_DIGEST_SIZE WC_SHA3_256_DIGEST_SIZE
+#define SHA3_384             WC_SHA3_384
+#define SHA3_384_DIGEST_SIZE WC_SHA3_384_DIGEST_SIZE
+#define SHA3_512             WC_SHA3_512
+#define SHA3_512_DIGEST_SIZE WC_SHA3_512_DIGEST_SIZE
+#define Sha3 wc_Sha3
 
 
 
