@@ -99,16 +99,8 @@ typedef struct Sha3 {
 
     void*  heap;
 
-#ifdef WOLFSSL_ASYNC_CRYPT
-    WC_ASYNC_DEV asyncDev;
-#endif /* WOLFSSL_ASYNC_CRYPT */
-#if defined(WOLFSSL_HASH_FLAGS) || defined(WOLF_CRYPTO_CB)
-    word32 flags; /* enum wc_HashFlags in hash.h */
-#endif
-#ifdef WOLFSSL_XILINX_CRYPT_SHA
     TEE_OperationHandle operation;
 } wc_Sha3;
-#endif
 
 
 WOLFSSL_API int wc_InitSha3_224(wc_Sha3*, void*, int);
